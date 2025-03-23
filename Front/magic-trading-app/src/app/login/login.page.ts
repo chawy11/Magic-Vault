@@ -77,8 +77,8 @@ export class LoginPage {
     this.authService.login(this.loginForm.value).subscribe(
       (response: any) => {
         console.log('Inicio de sesión exitoso', response);
-        this.authService.guardarToken(response.token); // Guarda el token en el localStorage
-        this.router.navigate(['/home']); // Redirige a la página de inicio
+        this.authService.guardarToken(response.token, response.usuario); // Pass both token and username
+        this.router.navigate(['/home']);
       },
       (error) => {
         console.error('Error en el inicio de sesión', error);

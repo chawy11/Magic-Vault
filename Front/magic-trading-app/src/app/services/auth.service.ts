@@ -32,8 +32,10 @@ export class AuthService {
     return this.http.post(`${this.apiUrl}/login`, credenciales);
   }
 
-  guardarToken(token: string) {
+  // In auth.service.ts
+  guardarToken(token: string, usuario: string) {
     localStorage.setItem('token', token);
+    localStorage.setItem('usuario', usuario);
   }
 
   estaAutenticado(): boolean {
@@ -42,6 +44,7 @@ export class AuthService {
 
   cerrarSesion() {
     localStorage.removeItem('token');
+    localStorage.removeItem('usuario');
     this.router.navigate(['/login']);
   }
 }

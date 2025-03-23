@@ -20,7 +20,7 @@ import { catchError, debounceTime, distinctUntilChanged, switchMap } from 'rxjs/
 import { of, Subject } from 'rxjs';
 import { Router } from '@angular/router';
 import {addIcons} from "ionicons";
-import {search} from "ionicons/icons"; // Importa Router para la navegación
+import {logOutOutline, personCircleOutline, search} from "ionicons/icons"; // Importa Router para la navegación
 
 @Component({
   selector: 'app-home',
@@ -56,7 +56,7 @@ export class HomePage implements OnInit {
     private scryfallService: ScryfallService,
     private router: Router // Inyecta Router para la navegación
   ) {
-    addIcons({search})
+    addIcons({search, personCircleOutline, logOutOutline})
   }
 
   ngOnInit(): void {
@@ -105,6 +105,10 @@ export class HomePage implements OnInit {
         queryParams: { q: this.nombreCarta.trim() }, // Pasa el término de búsqueda como parámetro
       });
     }
+  }
+
+  irAPerfil(): void {
+    this.router.navigate(['/profile']);
   }
 
   // Función para cerrar la sesión

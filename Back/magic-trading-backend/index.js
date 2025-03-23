@@ -1,10 +1,10 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const { MongoClient } = require('mongodb');
+const { MongoClient, ObjectId } = require('mongodb'); // Import ObjectId properly here
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-require('dotenv').config(); // Añadir dotenv para variables de entorno
+require('dotenv').config();
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -24,7 +24,7 @@ async function connect() {
         console.log('Conectado a MongoDB');
     } catch (err) {
         console.error('Error conectando a MongoDB:', err);
-        process.exit(1); // Salir si no podemos conectar a la base de datos
+        process.exit(1);
     }
 }
 
@@ -37,7 +37,6 @@ process.on('SIGINT', async () => {
 
 connect();
 
-// Ruta para el registro
 // Ruta para el registro
 app.post('/api/registro', async (req, res) => {
     const { usuario, email, password } = req.body;
@@ -82,7 +81,9 @@ app.post('/api/registro', async (req, res) => {
             usuario,
             email,
             password: hashedPassword,
-            fechaRegistro: new Date()
+            fechaRegistro: new Date(),
+            wants: [],
+            sells: []
         });
 
         res.status(201).json({ message: 'Usuario registrado con éxito', id: result.insertedId });
@@ -135,6 +136,231 @@ app.post('/api/login', async (req, res) => {
     } catch (err) {
         console.error('Error al iniciar sesión:', err);
         res.status(500).json({ message: 'Error al iniciar sesión' });
+    }
+});
+
+// Middleware para autenticar token
+function authenticateToken(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).json({ message: 'No se proporcionó token de autenticación' });
+    }
+
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+        if (err) {
+            return res.status(403).json({ message: 'Token inválido o expirado' });
+        }
+        req.user = user;
+        next();
+    });
+}
+
+// Obtener perfil de usuario
+app.get('/api/user/:username', async (req, res) => {
+    const { username } = req.params;
+
+    const db = client.db('magic_trading');
+    const collection = db.collection('usuarios');
+
+    try {
+        const user = await collection.findOne({ usuario: username }, { projection: { password: 0 } });
+        if (!user) {
+            return res.status(404).json({ message: 'Usuario no encontrado' });
+        }
+        res.status(200).json(user);
+    } catch (err) {
+        console.error('Error al obtener perfil:', err);
+        res.status(500).json({ message: 'Error al obtener perfil' });
+    }
+});
+
+// Update the want cards endpoint
+app.post('/api/user/wants', authenticateToken, async (req, res) => {
+    const { cardId, cardName, quantity = 1, setCode = '', edition = '', language = 'English', foil = false, price = 0 } = req.body;
+    const userId = req.user.id;
+
+    const db = client.db('magic_trading');
+    const collection = db.collection('usuarios');
+
+    try {
+        // Verificar si la carta ya existe en la lista
+        const user = await collection.findOne(
+            { _id: new ObjectId(userId), 'wants.cardId': cardId }
+        );
+
+        if (user) {
+            return res.status(400).json({ message: 'La carta ya está en tu lista de wants' });
+        }
+
+        await collection.updateOne(
+            { _id: new ObjectId(userId) },
+            { $push: { wants: { cardId, cardName, quantity, edition, setCode, language, foil, price, dateAdded: new Date() } } }
+        );
+
+        res.status(200).json({ message: 'Carta añadida a wants' });
+    } catch (err) {
+        console.error('Error al añadir carta:', err);
+        res.status(500).json({ message: 'Error al añadir carta' });
+    }
+});
+
+// Update the sell cards endpoint - this already includes price so no change needed
+
+// Update the sell cards endpoint
+app.post('/api/user/sells', authenticateToken, async (req, res) => {
+    const { cardId, cardName, quantity = 1, setCode = '', edition = '', language = 'English', foil = false, price = 0 } = req.body;
+    const userId = req.user.id;
+
+    const db = client.db('magic_trading');
+    const collection = db.collection('usuarios');
+
+    try {
+        // Verificar si la carta ya existe en la lista
+        const user = await collection.findOne(
+            { _id: new ObjectId(userId), 'sells.cardId': cardId }
+        );
+
+        if (user) {
+            return res.status(400).json({ message: 'La carta ya está en tu lista de sells' });
+        }
+
+        await collection.updateOne(
+            { _id: new ObjectId(userId) },
+            { $push: { sells: { cardId, cardName, quantity, edition, setCode, language, foil, price, dateAdded: new Date() } } }
+        );
+
+        res.status(200).json({ message: 'Carta añadida a sells' });
+    } catch (err) {
+        console.error('Error al añadir carta:', err);
+        res.status(500).json({ message: 'Error al añadir carta' });
+    }
+});
+
+// Actualizar carta en wants
+// Actualizar carta en wants
+app.put('/api/user/wants/:cardId', authenticateToken, async (req, res) => {
+    const { cardId } = req.params;
+    const { quantity, edition, language, foil, price = 0, setCode = '' } = req.body;
+    const userId = req.user.id;
+
+    const db = client.db('magic_trading');
+    const collection = db.collection('usuarios');
+
+    try {
+        await collection.updateOne(
+            { _id: new ObjectId(userId), "wants.cardId": cardId },
+            { $set: {
+                    "wants.$.quantity": quantity,
+                    "wants.$.edition": edition,
+                    "wants.$.language": language,
+                    "wants.$.foil": foil,
+                    "wants.$.price": price,
+                    "wants.$.setCode": setCode
+                } }
+        );
+
+        res.status(200).json({ message: 'Carta actualizada en wants' });
+    } catch (err) {
+        console.error('Error al actualizar carta:', err);
+        res.status(500).json({ message: 'Error al actualizar carta' });
+    }
+});
+
+// Actualizar carta en sells
+// Actualizar carta en sells
+app.put('/api/user/sells/:cardId', authenticateToken, async (req, res) => {
+    const { cardId } = req.params;
+    const { quantity, edition, language, foil, price, setCode = '' } = req.body;
+    const userId = req.user.id;
+
+    const db = client.db('magic_trading');
+    const collection = db.collection('usuarios');
+
+    try {
+        await collection.updateOne(
+            { _id: new ObjectId(userId), "sells.cardId": cardId },
+            { $set: {
+                    "sells.$.quantity": quantity,
+                    "sells.$.edition": edition,
+                    "sells.$.language": language,
+                    "sells.$.foil": foil,
+                    "sells.$.price": price,
+                    "sells.$.setCode": setCode
+                } }
+        );
+
+        res.status(200).json({ message: 'Carta actualizada en sells' });
+    } catch (err) {
+        console.error('Error al actualizar carta:', err);
+        res.status(500).json({ message: 'Error al actualizar carta' });
+    }
+});
+
+// Eliminar carta de wants
+app.delete('/api/user/wants/:cardId', authenticateToken, async (req, res) => {
+    const { cardId } = req.params;
+    const userId = req.user.id;
+
+    const db = client.db('magic_trading');
+    const collection = db.collection('usuarios');
+
+    try {
+        await collection.updateOne(
+            { _id: new ObjectId(userId) },
+            { $pull: { wants: { cardId } } }
+        );
+
+        res.status(200).json({ message: 'Carta eliminada de wants' });
+    } catch (err) {
+        console.error('Error al eliminar carta:', err);
+        res.status(500).json({ message: 'Error al eliminar carta' });
+    }
+});
+
+// Eliminar carta de sells
+app.delete('/api/user/sells/:cardId', authenticateToken, async (req, res) => {
+    const { cardId } = req.params;
+    const userId = req.user.id;
+
+    const db = client.db('magic_trading');
+    const collection = db.collection('usuarios');
+
+    try {
+        await collection.updateOne(
+            { _id: new ObjectId(userId) },
+            { $pull: { sells: { cardId } } }
+        );
+
+        res.status(200).json({ message: 'Carta eliminada de sells' });
+    } catch (err) {
+        console.error('Error al eliminar carta:', err);
+        res.status(500).json({ message: 'Error al eliminar carta' });
+    }
+});
+
+// Obtener detalles del usuario autenticado
+app.get('/api/user/profile/me', authenticateToken, async (req, res) => {
+    const userId = req.user.id;
+
+    const db = client.db('magic_trading');
+    const collection = db.collection('usuarios');
+
+    try {
+        const user = await collection.findOne(
+            { _id: new ObjectId(userId) },
+            { projection: { password: 0 } }
+        );
+
+        if (!user) {
+            return res.status(404).json({ message: 'Usuario no encontrado' });
+        }
+
+        res.status(200).json(user);
+    } catch (err) {
+        console.error('Error al obtener perfil:', err);
+        res.status(500).json({ message: 'Error al obtener perfil' });
     }
 });
 

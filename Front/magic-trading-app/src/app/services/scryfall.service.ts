@@ -21,4 +21,14 @@ export class ScryfallService {
     const url = `${this.baseUrl}/cards/${id}`;
     return this.http.get<any>(url);
   }
+
+  // Add to scryfall.service.ts
+  getCardPrints(cardName: string): Observable<any> {
+    const url = `${this.baseUrl}/cards/search?q=!"${encodeURIComponent(cardName)}"&unique=prints`;
+    return this.http.get<any>(url);
+  }
+
+  getCardPrice(setCode: string, cardName: string): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/cards/search?q=!"${encodeURIComponent(cardName)}" set:${setCode}`);
+  }
 }

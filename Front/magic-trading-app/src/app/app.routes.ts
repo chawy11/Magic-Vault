@@ -26,8 +26,17 @@ export const routes: Routes = [
     canActivate: [AuthGuard], // Protege la ruta con el AuthGuard
   },
   {
+    path: 'profile',
+    loadComponent: () => import('./profile/profile.page').then((m) => m.ProfilePage),
+    canActivate: [AuthGuard],
+  },
+  {
     path: '',
     redirectTo: 'registro',
     pathMatch: 'full',
+  },
+  {
+    path: 'profile',
+    loadComponent: () => import('./profile/profile.page').then( m => m.ProfilePage)
   },
 ];

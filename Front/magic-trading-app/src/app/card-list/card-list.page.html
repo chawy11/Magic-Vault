@@ -19,6 +19,11 @@
         @for (carta of cartas; track carta.id) {
           <ion-col size="4" size-md="3" size-lg="2" size-xl="2">
             <ion-card class="card" (click)="irADetalle(carta)">
+              <!-- Opciones (tres puntos) -->
+              <div class="options-button" (click)="mostrarOpciones(carta, $event)">
+                <ion-icon name="ellipsisVertical"></ion-icon>
+              </div>
+
               <!-- Imagen de la carta -->
               <img [src]="carta.image_uris?.normal" alt="{{ carta.name }}" />
 
