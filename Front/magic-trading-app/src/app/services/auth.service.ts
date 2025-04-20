@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { catchError, throwError } from 'rxjs';
+import { catchError, throwError, Observable } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -28,11 +28,12 @@ export class AuthService {
     );
   }
 
-  login(credenciales: any) {
-    return this.http.post(`${this.apiUrl}/login`, credenciales);
+  login(credenciales: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/login`, credenciales).pipe(
+      catchError(this.handleError)
+    );
   }
 
-  // In auth.service.ts
   guardarToken(token: string, usuario: string) {
     localStorage.setItem('token', token);
     localStorage.setItem('usuario', usuario);
@@ -43,8 +44,38 @@ export class AuthService {
   }
 
   cerrarSesion() {
+    // Limpieza completa del localStorage
     localStorage.removeItem('token');
     localStorage.removeItem('usuario');
-    this.router.navigate(['/login']);
+
+    // Eliminar cualquier otro dato de sesión que pueda haberse almacenado
+    localStorage.removeItem('userId');
+
+
+    window.location.href = '/login'; // Usar en vez de Router para forzar recarga completa
+  }
+
+  getUsuarioActual(): string {
+    return localStorage.getItem('usuario') || '';
+  }
+
+  private handleError(error: HttpErrorResponse) {
+    let errorMessage = 'Error en la autenticación';
+
+    if (error.error instanceof ErrorEvent) {
+      // Error del lado del cliente
+      errorMessage = `Error: ${error.error.message}`;
+    } else {
+      // Error del backend
+      if (error.status === 400) {
+        errorMessage = error.error.message || 'Usuario o contraseña incorrectos';
+      } else if (error.status === 0) {
+        errorMessage = 'No se pudo conectar al servidor. Verifica tu conexión a internet.';
+      } else {
+        errorMessage = `Error ${error.status}: ${error.error.message || 'Error desconocido'}`;
+      }
+    }
+
+    return throwError(() => new Error(errorMessage));
   }
 }

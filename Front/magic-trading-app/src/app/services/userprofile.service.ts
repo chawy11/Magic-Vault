@@ -23,8 +23,14 @@ export class UserprofileService {
     return this.http.get(`${this.apiUrl}/user/profile/me`, { headers: this.getHeaders() });
   }
 
+
+  getMatchingCards(otherUsername: string): Observable<any> {
+    return this.http.get(`${this.apiUrl}/matches/${otherUsername}/cards`,
+      { headers: this.getHeaders() }
+    );
+  }
+
   // Update these methods to include edition data
-  // Update these methods to include price parameter
   addCardToWants(cardId: string, cardName: string, setCode: string = '', setName: string = '', price: number = 0): Observable<any> {
     return this.http.post(`${this.apiUrl}/user/wants`,
       { cardId, cardName, edition: setName, setCode, price },
@@ -64,5 +70,15 @@ export class UserprofileService {
     return this.http.delete(`${this.apiUrl}/user/sells/${cardId}`,
       { headers: this.getHeaders() }
     );
+  }
+
+
+// Update these methods to include auth headers
+  getProfileByUsername(username: string): Observable<any> {
+    return this.http.get(`${this.apiUrl}/profile/${username}`, { headers: this.getHeaders() });
+  }
+
+  getMatches(otherUsername: string): Observable<any> {
+    return this.http.get(`${this.apiUrl}/matches/${otherUsername}`, { headers: this.getHeaders() });
   }
 }

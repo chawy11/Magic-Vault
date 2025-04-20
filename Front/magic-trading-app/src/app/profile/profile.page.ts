@@ -1,21 +1,49 @@
 // src/app/profile/profile.page.ts
 
 import { Component, OnInit } from '@angular/core';
+import { IonicModule } from '@ionic/angular';
 import { UserprofileService } from '../services/userprofile.service';
 import { ScryfallService } from '../services/scryfall.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
-  IonHeader, IonToolbar, IonTitle, IonContent, IonItem,
-  IonLabel, IonList, IonButton, IonInput, IonSelect, IonSelectOption,
-  IonSegment, IonSegmentButton, IonSearchbar, IonIcon, IonFab, IonFabButton,
-  IonModal, IonGrid, IonRow, IonCol, IonToggle, IonButtons
+  IonHeader,
+  IonToolbar,
+  IonTitle,
+  IonContent,
+  IonItem,
+  IonLabel,
+  IonList,
+  IonButton,
+  IonInput,
+  IonSelect,
+  IonSelectOption,
+  IonSegment,
+  IonSegmentButton,
+  IonSearchbar,
+  IonIcon,
+  IonFab,
+  IonFabButton,
+  IonModal,
+  IonGrid,
+  IonRow,
+  IonCol,
+  IonToggle,
+  IonButtons,
+  IonCard,
+  IonCardHeader,
+  IonCardTitle,
+  IonCardContent,
+  IonCheckbox, IonBadge
 } from '@ionic/angular/standalone';
 import { AlertController } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { search, add, create, close, trash, ellipsisVertical, arrowBack } from 'ionicons/icons';
+import { search, add, create, close, trash, ellipsisVertical, arrowBack, share } from 'ionicons/icons';
 import { lastValueFrom } from 'rxjs';
 import {RouterLink} from "@angular/router";
+import { ActivatedRoute } from '@angular/router';
+import { ToastController } from '@ionic/angular/standalone';
+import {TransactionService} from "../services/transaction.service";
 
 @Component({
   selector: 'app-profile',
@@ -28,7 +56,7 @@ import {RouterLink} from "@angular/router";
     IonHeader, IonToolbar, IonTitle, IonContent, IonItem,
     IonLabel, IonList, IonButton, IonInput, IonSelect, IonSelectOption,
     IonSegment, IonSegmentButton, IonSearchbar, IonIcon, IonFab, IonFabButton,
-    IonModal, IonGrid, IonRow, IonCol, IonToggle, IonButtons, RouterLink
+    IonModal, IonGrid, IonRow, IonCol, IonToggle, IonButtons, RouterLink, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonCheckbox, IonBadge
   ]
 })
 export class ProfilePage implements OnInit {
@@ -45,20 +73,183 @@ export class ProfilePage implements OnInit {
   languages: string[] = ['English', 'Spanish', 'French', 'German', 'Italian', 'Japanese'];
   isModalOpen: boolean = false;
   printingsMap: { [key: string]: any } = {};
+  viewedUsername: string = '';
+  isOwnProfile: boolean = true;
+  transactionMode: boolean = false;
+  myMatchingCards: any[] = [];
+  theirMatchingCards: any[] = [];
+  viewedUserId: string = '';
+  transactions: any[] = [];
+  currentUserId: string = '';
+  matches = {
+    wantsMatches: 0,
+    wantsTotal: 0,
+    sellsMatches: 0,
+    sellsTotal: 0
+  };
 
   constructor(
     private userProfileService: UserprofileService,
     private scryfallService: ScryfallService,
-    private alertController: AlertController
+    private alertController: AlertController,
+    private route: ActivatedRoute,
+    private toastController: ToastController,
+    private transactionService: TransactionService,
+
   ) {
-    addIcons({ search, add, create, close, trash, ellipsisVertical, arrowBack });
+    addIcons({ search, add, create, close, trash, ellipsisVertical, arrowBack, share });
     this.currentUser = localStorage.getItem('usuario') || '';
   }
 
 
 
   ngOnInit(): void {
-    this.loadProfile();
+    this.route.params.subscribe(params => {
+      if (params['username']) {
+        this.viewedUsername = params['username'];
+        this.isOwnProfile = this.viewedUsername === this.currentUser;
+
+        if (this.isOwnProfile) {
+          this.loadProfile(); // Load own profile
+        } else {
+          this.loadOtherUserProfile(); // Load someone else's profile
+          this.loadMatches(); // Load matches between current user and viewed user
+        }
+      } else {
+        this.viewedUsername = this.currentUser;
+        this.isOwnProfile = true;
+        this.loadProfile();
+      }
+    });
+
+
+    // Obtener ID del usuario actual
+    this.userProfileService.getMyProfile().subscribe(data => {
+      this.currentUserId = data._id;
+    });
+
+    // Cargar transacciones
+    this.loadTransactions();
+  }
+
+  loadTransactions(): void {
+    this.transactionService.getMyTransactions().subscribe(
+      data => {
+        this.transactions = data;
+      },
+      error => {
+        console.error('Error al cargar transacciones:', error);
+      }
+    );
+  }
+
+  // Mejora el método confirmTransaction para actualizar completamente los datos
+  confirmTransaction(transactionId: string): void {
+    this.transactionService.confirmTransaction(transactionId).subscribe(
+      response => {
+        this.presentToast('Transacción confirmada correctamente');
+
+        // Recarga todas las listas para reflejar los cambios
+        this.loadTransactions();
+
+        // Forzar actualización completa
+        if (this.isOwnProfile) {
+          this.loadProfile();
+        } else {
+          this.loadOtherUserProfile();
+          this.loadMatches();
+        }
+
+        // Si la transacción está completa, recarga para ver cambios inmediatos
+        if (response.transactionCompleted) {
+          setTimeout(() => {
+            // Segunda recarga después de 500ms para asegurar que el backend actualizó todo
+            this.loadTransactions();
+            if (this.isOwnProfile) {
+              this.loadProfile();
+            } else {
+              this.loadOtherUserProfile();
+            }
+          }, 500);
+        }
+      },
+      error => {
+        console.error('Error al confirmar transacción:', error);
+        this.presentToast('Error al confirmar la transacción');
+      }
+    );
+  }
+
+  getConfirmationStatus(transaction: any): string {
+    const isBuyer = transaction.buyerId === this.currentUserId;
+
+    if (isBuyer) {
+      if (transaction.buyerConfirmed) {
+        return 'Esperando confirmación del vendedor';
+      } else {
+        return 'Pendiente de tu confirmación';
+      }
+    } else {
+      if (transaction.sellerConfirmed) {
+        return 'Esperando confirmación del comprador';
+      } else {
+        return 'Pendiente de tu confirmación';
+      }
+    }
+  }
+
+  loadOtherUserProfile(): void {
+    this.userProfileService.getProfileByUsername(this.viewedUsername).subscribe(
+      data => {
+        console.log('Datos recibidos del perfil:', data); // Para depuración
+        this.wantsList = data.wants || [];
+        this.sellsList = data.sells || [];
+
+        if (data._id) {
+          this.viewedUserId = data._id;
+          console.log('ID del usuario visualizado:', this.viewedUserId);
+        } else {
+          console.error('Error: El ID del usuario no se ha recibido');
+          this.presentToast('Error al cargar el perfil. ID de usuario no disponible.');
+        }
+      },
+      error => {
+        console.error('Error loading other user profile:', error);
+        this.presentToast('Error al cargar el perfil del usuario');
+      }
+    );
+  }
+
+  loadMatches(): void {
+    this.userProfileService.getMatches(this.viewedUsername).subscribe(
+      data => {
+        this.matches.wantsMatches = data.wantsMatches || 0;
+        this.matches.wantsTotal = data.wantsTotal || 0;
+        this.matches.sellsMatches = data.sellsMatches || 0;
+        this.matches.sellsTotal = data.sellsTotal || 0;
+      },
+      error => console.error('Error loading matches:', error)
+    );
+  }
+
+  shareProfile(): void {
+    const url = `${window.location.origin}/profile/${this.currentUser}`;
+    navigator.clipboard.writeText(url)
+      .then(() => {
+        this.presentToast('Enlace copiado al portapapeles');
+      })
+      .catch(err => {
+        console.error('Error al copiar enlace:', err);
+      });
+  }
+
+  async presentToast(message: string): Promise<void> {
+    const toast = await this.toastController.create({
+      message,
+      duration: 2000,
+      position: 'bottom'
+    });
+    await toast.present();
   }
 
   loadProfile(): void {
@@ -73,9 +264,28 @@ export class ProfilePage implements OnInit {
     );
   }
 
-  segmentChanged(ev: any): void {
+  segmentChanged(event: any): void {
+    // Guardar segmento activo
+    this.activeSegment = event.detail.value;
+
+    // Limpiar búsqueda
     this.searchTerm = '';
     this.searchResults = [];
+
+    // Si cambia al segmento de transacciones, recargar las transacciones
+    if (this.activeSegment === 'transactions') {
+      this.loadTransactions();
+    }
+
+    // Si cambia a wants o sells y hay transacciones completadas, actualizar las listas
+    if ((this.activeSegment === 'wants' || this.activeSegment === 'sells') &&
+      this.transactions.some(tx => tx.status === 'completed')) {
+      if (this.isOwnProfile) {
+        this.loadProfile(); // Usar loadProfile, no loadMyProfile
+      } else {
+        this.loadOtherUserProfile();
+      }
+    }
   }
 
   toggleSearch(): void {
@@ -348,5 +558,104 @@ export class ProfilePage implements OnInit {
     });
 
     await alert.present();
+  }
+
+
+  // Preparar la transacción
+  prepareTransaction(): void {
+    this.transactionMode = true;
+
+    // Cargar cartas coincidentes
+    this.userProfileService.getMatchingCards(this.viewedUsername).subscribe(
+      (data: any) => {
+        // Añadir propiedad selected a todas las cartas
+        this.myMatchingCards = (data.myMatchingCards || []).map((card: any) => ({...card, selected: false}));
+        this.theirMatchingCards = (data.theirMatchingCards || []).map((card: any) => ({...card, selected: false}));
+      },
+      (error: any) => {
+        console.error('Error al cargar cartas coincidentes:', error);
+        this.presentToast('Error al preparar la transacción');
+      }
+    );
+  }
+
+// Cancelar el modo de transacción
+  cancelTransactionMode(): void {
+    this.transactionMode = false;
+    this.myMatchingCards = [];
+    this.theirMatchingCards = [];
+  }
+
+// Verificar si se puede enviar la transacción
+  canSubmitTransaction(): boolean {
+    // Se permite transacción si al menos hay una carta seleccionada (compra, venta o ambas)
+    const buyerSelectedCards = this.theirMatchingCards.filter((card: any) => card.selected).length > 0;
+    const sellerSelectedCards = this.myMatchingCards.filter((card: any) => card.selected).length > 0;
+
+    return buyerSelectedCards || sellerSelectedCards;
+  }
+
+// Enviar la transacción
+  submitTransaction(): void {
+    // Obtener cartas seleccionadas
+    const buyerWants = this.theirMatchingCards.filter((card: any) => card.selected);
+    const sellerWants = this.myMatchingCards.filter((card: any) => card.selected);
+
+    if (buyerWants.length === 0 && sellerWants.length === 0) {
+      this.presentToast('Debes seleccionar al menos una carta');
+      return;
+    }
+
+    if (!this.viewedUserId) {
+      console.error('Error: ID de usuario del vendedor no disponible');
+      this.presentToast('Error: No se puede completar la transacción sin ID de vendedor');
+
+      // Intenta cargar el perfil nuevamente
+      this.loadOtherUserProfile();
+      setTimeout(() => {
+        if (this.viewedUserId) {
+          this.presentToast('Información actualizada. Intenta de nuevo.');
+        } else {
+          this.presentToast('No se pudo obtener el ID del vendedor. Recarga la página.');
+        }
+      }, 1000);
+      return;
+    }
+
+    console.log('Enviando transacción con sellerId:', this.viewedUserId);
+
+    // Envía la transacción al servidor
+    this.transactionService.createTransaction(
+      this.viewedUserId,
+      buyerWants,
+      sellerWants
+    ).subscribe(
+      (response: any) => {
+        this.transactionMode = false;
+        this.presentToast('Transacción propuesta correctamente');
+        this.loadOtherUserProfile();
+        this.myMatchingCards = [];
+        this.theirMatchingCards = [];
+      },
+      (error: any) => {
+        console.error('Error al crear transacción:', error);
+        this.presentToast('Error al crear la transacción: ' +
+          (error.error?.message || 'Error desconocido'));
+      }
+    );
+  }
+
+  // Añade este método a tu clase ProfilePage
+  ionViewDidEnter() {
+    console.log('🔄 ionViewDidEnter EJECUTADO!');
+
+    if (this.isOwnProfile) {
+      this.loadProfile();
+    } else {
+      this.loadOtherUserProfile();
+      this.loadMatches();
+    }
+
+    this.loadTransactions();
   }
 }

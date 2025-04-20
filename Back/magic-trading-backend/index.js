@@ -176,6 +176,303 @@ app.get('/api/user/:username', async (req, res) => {
     }
 });
 
+// Get user profile by username (for viewing other profiles)
+app.get('/api/profile/:username', async (req, res) => {
+    const { username } = req.params;
+
+    const db = client.db('magic_trading');
+    const collection = db.collection('usuarios');
+
+    try {
+        const user = await collection.findOne(
+            { usuario: username },
+            { projection: { password: 0, email: 0 } }
+        );
+
+        if (!user) {
+            return res.status(404).json({ message: 'Usuario no encontrado' });
+        }
+
+        res.status(200).json({
+            _id: user._id, // Asegúrate de incluir el ID
+            usuario: user.usuario,
+            wants: user.wants || [],
+            sells: user.sells || []
+        });
+    } catch (err) {
+        console.error('Error al obtener perfil:', err);
+        res.status(500).json({ message: 'Error al obtener perfil' });
+    }
+});
+
+// Express route example
+// Fix the authenticateJWT to authenticateToken to match your existing middleware
+app.get('/api/matches/:username', authenticateToken, async (req, res) => {
+    try {
+        const currentUser = req.user.usuario; // Get current username from token
+        const otherUser = req.params.username;
+
+        const db = client.db('magic_trading');
+        const collection = db.collection('usuarios');
+
+        // Get both users' lists
+        const currentUserProfile = await collection.findOne({ usuario: currentUser });
+        const otherUserProfile = await collection.findOne({ usuario: otherUser });
+
+        if (!currentUserProfile || !otherUserProfile) {
+            return res.status(404).json({ message: 'One or both users not found' });
+        }
+
+        // Debug logs to check data
+        console.log(`Current user wants: ${JSON.stringify(currentUserProfile.wants)}`);
+        console.log(`Other user sells: ${JSON.stringify(otherUserProfile.sells)}`);
+
+        // Calculate matches (their sells match your wants)
+        const wantsMatches = currentUserProfile.wants ?
+            currentUserProfile.wants.filter(wantCard =>
+                    otherUserProfile.sells && otherUserProfile.sells.some(sellCard =>
+                        sellCard.cardName === wantCard.cardName
+                    )
+            ).length : 0;
+
+        // Calculate matches (your sells match their wants)
+        const sellsMatches = currentUserProfile.sells ?
+            currentUserProfile.sells.filter(sellCard =>
+                    otherUserProfile.wants && otherUserProfile.wants.some(wantCard =>
+                        wantCard.cardName === sellCard.cardName
+                    )
+            ).length : 0;
+
+        res.json({
+            wantsMatches,
+            wantsTotal: currentUserProfile.wants ? currentUserProfile.wants.length : 0,
+            sellsMatches,
+            sellsTotal: currentUserProfile.sells ? currentUserProfile.sells.length : 0
+        });
+    } catch (error) {
+        console.error('Error getting matches:', error);
+        res.status(500).json({ message: 'Error getting matches' });
+    }
+});
+
+// Obtener cartas coincidentes para transacción
+app.get('/api/matches/:username/cards', authenticateToken, async (req, res) => {
+    const { username } = req.params;
+    const currentUserId = req.user.id;
+    const currentUsername = req.user.usuario;
+
+    const db = client.db('magic_trading');
+    const collection = db.collection('usuarios');
+
+    try {
+        // Obtener usuario actual
+        const currentUser = await collection.findOne({ usuario: currentUsername });
+
+        // Obtener otro usuario
+        const otherUser = await collection.findOne({ usuario: username });
+
+        if (!currentUser || !otherUser) {
+            return res.status(404).json({ message: 'Usuario no encontrado' });
+        }
+
+        // Cartas que el usuario actual tiene y que coinciden con wants del otro usuario
+        const myMatchingCards = (currentUser.sells || []).filter(myCard =>
+            (otherUser.wants || []).some(theirWant =>
+                myCard.cardName === theirWant.cardName
+            )
+        );
+
+        // Cartas que el otro usuario tiene y que coinciden con wants del usuario actual
+        const theirMatchingCards = (otherUser.sells || []).filter(theirCard =>
+            (currentUser.wants || []).some(myWant =>
+                myWant.cardName === theirCard.cardName
+            )
+        );
+
+        res.status(200).json({
+            myMatchingCards,
+            theirMatchingCards
+        });
+    } catch (error) {
+        console.error('Error al obtener cartas coincidentes:', error);
+        res.status(500).json({ message: 'Error al obtener cartas coincidentes' });
+    }
+});
+
+// En index.js
+app.get('/api/transactions', authenticateToken, async (req, res) => {
+    const userId = req.user.id;
+
+    const db = client.db('magic_trading');
+    const transactionsCollection = db.collection('transactions');
+
+    try {
+        // Buscar transacciones donde el usuario es comprador o vendedor
+        const transactions = await transactionsCollection.find({
+            $or: [
+                { buyerId: new ObjectId(userId) },
+                { sellerId: new ObjectId(userId) }
+            ]
+        }).sort({ createdAt: -1 }).toArray();
+
+        res.status(200).json(transactions);
+    } catch (error) {
+        console.error('Error al obtener transacciones:', error);
+        res.status(500).json({ message: 'Error al obtener transacciones' });
+    }
+});
+
+// Crear una transacción
+app.post('/api/transaction/create', authenticateToken, async (req, res) => {
+    const { sellerId, buyerWants, sellerWants } = req.body;
+    const buyerId = req.user.id;
+
+    const db = client.db('magic_trading');
+    const transactionsCollection = db.collection('transactions');
+    const usersCollection = db.collection('usuarios');
+
+    try {
+        // Obtener información de los usuarios
+        const buyer = await usersCollection.findOne({ _id: new ObjectId(buyerId) });
+        const seller = await usersCollection.findOne({ _id: new ObjectId(sellerId) });
+
+        if (!buyer || !seller) {
+            return res.status(404).json({ message: 'Usuario no encontrado' });
+        }
+
+        // Crear la transacción (soporta tanto compra, venta o ambas)
+        const result = await transactionsCollection.insertOne({
+            buyerId: new ObjectId(buyerId),
+            sellerId: new ObjectId(sellerId),
+            buyerUsername: buyer.usuario,
+            sellerUsername: seller.usuario,
+            buyerWants: buyerWants || [],  // Lo que el comprador quiere (del vendedor)
+            sellerWants: sellerWants || [], // Lo que el vendedor quiere (del comprador)
+            buyerConfirmed: false,
+            sellerConfirmed: false,
+            status: 'pending',
+            createdAt: new Date()
+        });
+
+        // Marcar las cartas como en transacción
+        if (buyerWants && buyerWants.length > 0) {
+            for (const card of buyerWants) {
+                await usersCollection.updateOne(
+                    { _id: new ObjectId(sellerId), "sells.cardId": card.cardId },
+                    { $set: { "sells.$.inTransaction": true } }
+                );
+            }
+        }
+
+        if (sellerWants && sellerWants.length > 0) {
+            for (const card of sellerWants) {
+                await usersCollection.updateOne(
+                    { _id: new ObjectId(buyerId), "sells.cardId": card.cardId },
+                    { $set: { "sells.$.inTransaction": true } }
+                );
+            }
+        }
+
+        res.status(201).json({
+            message: 'Transacción creada correctamente',
+            transactionId: result.insertedId
+        });
+    } catch (error) {
+        console.error('Error al crear transacción:', error);
+        res.status(500).json({ message: 'Error al crear transacción' });
+    }
+});
+
+// Modificación en index.js para manejar cartas después de completar una transacción
+app.put('/api/transaction/:id/confirm', authenticateToken, async (req, res) => {
+    const transactionId = req.params.id;
+    const userId = req.user.id;
+
+    const db = client.db('magic_trading');
+    const transactionsCollection = db.collection('transactions');
+    const usersCollection = db.collection('usuarios');
+
+    try {
+        const transaction = await transactionsCollection.findOne({
+            _id: new ObjectId(transactionId),
+            $or: [
+                { buyerId: new ObjectId(userId) },
+                { sellerId: new ObjectId(userId) }
+            ]
+        });
+
+        if (!transaction) {
+            return res.status(404).json({ message: 'Transacción no encontrada' });
+        }
+
+        // Determinar si el usuario es comprador o vendedor
+        const isBuyer = transaction.buyerId.toString() === userId;
+
+        // Actualizar el estado de confirmación
+        const updateField = isBuyer ? 'buyerConfirmed' : 'sellerConfirmed';
+
+        await transactionsCollection.updateOne(
+            { _id: new ObjectId(transactionId) },
+            { $set: { [updateField]: true } }
+        );
+
+        // Verificar si ambos han confirmado
+        const updatedTransaction = await transactionsCollection.findOne({
+            _id: new ObjectId(transactionId)
+        });
+
+        if (updatedTransaction.buyerConfirmed && updatedTransaction.sellerConfirmed) {
+            // Actualizar estado de la transacción
+            await transactionsCollection.updateOne(
+                { _id: new ObjectId(transactionId) },
+                { $set: { status: 'completed', completedAt: new Date() } }
+            );
+
+            // 1. Eliminar las cartas que el comprador recibe de la lista de sells del vendedor
+            if (updatedTransaction.buyerWants && updatedTransaction.buyerWants.length > 0) {
+                for (const card of updatedTransaction.buyerWants) {
+                    console.log(`Eliminando carta ${card.cardName} (${card.cardId}) de sells del vendedor`);
+                    await usersCollection.updateOne(
+                        { _id: updatedTransaction.sellerId },
+                        { $pull: { sells: { cardId: card.cardId.toString() } } }
+                    );
+
+                    // NUEVO: Eliminar de wants del comprador
+                    await usersCollection.updateOne(
+                        { _id: updatedTransaction.buyerId },
+                        { $pull: { wants: { cardName: card.cardName } } }
+                    );
+                }
+            }
+
+            // 2. Eliminar las cartas que el vendedor recibe de la lista de sells del comprador
+            if (updatedTransaction.sellerWants && updatedTransaction.sellerWants.length > 0) {
+                for (const card of updatedTransaction.sellerWants) {
+                    console.log(`Eliminando carta ${card.cardName} (${card.cardId}) de sells del comprador`);
+                    await usersCollection.updateOne(
+                        { _id: updatedTransaction.buyerId },
+                        { $pull: { sells: { cardId: card.cardId.toString() } } }
+                    );
+
+                    // NUEVO: Eliminar de wants del vendedor
+                    await usersCollection.updateOne(
+                        { _id: updatedTransaction.sellerId },
+                        { $pull: { wants: { cardName: card.cardName } } }
+                    );
+                }
+            }
+        }
+
+        res.status(200).json({
+            message: 'Confirmación registrada',
+            transactionCompleted: (updatedTransaction.buyerConfirmed && updatedTransaction.sellerConfirmed)
+        });
+    } catch (error) {
+        console.error('Error al confirmar transacción:', error);
+        res.status(500).json({ message: 'Error al confirmar transacción' });
+    }
+});
+
 // Update the want cards endpoint
 app.post('/api/user/wants', authenticateToken, async (req, res) => {
     const { cardId, cardName, quantity = 1, setCode = '', edition = '', language = 'English', foil = false, price = 0 } = req.body;
@@ -239,7 +536,7 @@ app.post('/api/user/sells', authenticateToken, async (req, res) => {
 });
 
 // Actualizar carta en wants
-// Actualizar carta en wants
+
 app.put('/api/user/wants/:cardId', authenticateToken, async (req, res) => {
     const { cardId } = req.params;
     const { quantity, edition, language, foil, price = 0, setCode = '' } = req.body;
@@ -268,7 +565,6 @@ app.put('/api/user/wants/:cardId', authenticateToken, async (req, res) => {
     }
 });
 
-// Actualizar carta en sells
 // Actualizar carta en sells
 app.put('/api/user/sells/:cardId', authenticateToken, async (req, res) => {
     const { cardId } = req.params;
