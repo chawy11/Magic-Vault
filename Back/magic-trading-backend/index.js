@@ -473,6 +473,129 @@ app.put('/api/transaction/:id/confirm', authenticateToken, async (req, res) => {
     }
 });
 
+
+// JavaScript
+app.post('/api/transaction/:id/review', authenticateToken, async (req, res) => {
+    const transactionId = req.params.id;
+    const userId = req.user.id;
+    const { rating, comment = '' } = req.body;
+
+    if (!rating || rating < 1 || rating > 5) {
+        return res.status(400).json({ message: 'La valoración debe ser un número entre 1 y 5' });
+    }
+
+    const db = client.db('magic_trading');
+    const txCol = db.collection('transactions');
+    try {
+        const tx = await txCol.findOne({
+            _id: new ObjectId(transactionId),
+            status: 'completed',
+            $or: [
+                { buyerId: new ObjectId(userId) },
+                { sellerId: new ObjectId(userId) }
+            ]
+        });
+        if (!tx) {
+            return res.status(404).json({ message: 'Transacción no encontrada o no completada' });
+        }
+
+        const isBuyer = tx.buyerId.equals(new ObjectId(userId));
+        const reviewField = isBuyer ? 'buyerReview' : 'sellerReview';
+        if (tx[reviewField]) {
+            return res.status(400).json({ message: 'Ya has dejado una reseña' });
+        }
+
+        await txCol.updateOne(
+            { _id: tx._id },
+            { $set: { [reviewField]: { rating, comment, date: new Date() } } }
+        );
+
+        const updated = await txCol.findOne({ _id: tx._id });
+        if (updated.buyerReview && updated.sellerReview) {
+            await txCol.updateOne(
+                { _id: tx._id },
+                { $set: { reviewsCompleted: true } }
+            );
+        }
+
+        res.status(200).json({ message: 'Reseña guardada correctamente' });
+    } catch (error) {
+        console.error('Error al guardar reseña:', error);
+        res.status(500).json({ message: 'Error al guardar la reseña' });
+    }
+});
+
+app.get('/api/user/reviews', authenticateToken, async (req, res) => {
+    try {
+        // Nota: Cambiamos req.user.id por req.user._id
+        const userId = req.user._id;
+
+        if (!userId) {
+            return res.status(404).json({ message: 'Usuario no encontrado' });
+        }
+
+        console.log('Buscando valoraciones para el usuario:', userId);
+
+        const db = client.db('magic_trading');
+        const transactionsCollection = db.collection('transactions');
+
+        // Asegúrate de comparar con el mismo tipo de datos
+        // Puede ser necesario convertir a ObjectId si usas ObjectId en MongoDB
+        const { ObjectId } = require('mongodb');
+        const objectId = new ObjectId(userId);
+
+        // Buscar transacciones usando ObjectId
+        const sellerReviews = await transactionsCollection.find({
+            sellerId: userId, // o objectId si usas ObjectId
+            status: 'completed',
+            buyerReview: { $exists: true }
+        }).toArray();
+
+        const buyerReviews = await transactionsCollection.find({
+            buyerId: userId, // o objectId si usas ObjectId
+            status: 'completed',
+            sellerReview: { $exists: true }
+        }).toArray();
+
+        console.log('Valoraciones como vendedor:', sellerReviews.length);
+        console.log('Valoraciones como comprador:', buyerReviews.length);
+
+        // Resto del código igual...
+        const reviews = [];
+
+        // Añadir valoraciones recibidas como vendedor
+        for (const tx of sellerReviews) {
+            if (tx.buyerReview) {
+                reviews.push({
+                    fromUsername: tx.buyerUsername,
+                    rating: tx.buyerReview.rating,
+                    comment: tx.buyerReview.comment,
+                    date: tx.buyerReview.date,
+                    cards: tx.buyerWants || []
+                });
+            }
+        }
+
+        // Añadir valoraciones recibidas como comprador
+        for (const tx of buyerReviews) {
+            if (tx.sellerReview) {
+                reviews.push({
+                    fromUsername: tx.sellerUsername,
+                    rating: tx.sellerReview.rating,
+                    comment: tx.sellerReview.comment,
+                    date: tx.sellerReview.date,
+                    cards: tx.sellerWants || []
+                });
+            }
+        }
+
+        return res.status(200).json(reviews);
+    } catch (error) {
+        console.error('Error al obtener valoraciones:', error);
+        return res.status(500).json({ message: 'Error al cargar las valoraciones: ' + error.message });
+    }
+});
+
 // Update the want cards endpoint
 app.post('/api/user/wants', authenticateToken, async (req, res) => {
     const { cardId, cardName, quantity = 1, setCode = '', edition = '', language = 'English', foil = false, price = 0 } = req.body;

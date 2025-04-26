@@ -36,4 +36,14 @@ export class TransactionService {
   confirmTransaction(transactionId: string): Observable<any> {
     return this.http.put(`${this.apiUrl}/transaction/${transactionId}/confirm`, {}, { headers: this.getHeaders() });
   }
+
+  // Añadir a transaction.service.ts
+  addReview(transactionId: string, rating: number, comment: string): Observable<any> {
+    return this.http.post(
+      `${this.apiUrl}/transaction/${transactionId}/review`,
+      { rating, comment },
+      { headers: this.getHeaders() }
+    );
+  }
+
 }

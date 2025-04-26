@@ -33,3 +33,55 @@ ion-fab-button {
   justify-content: flex-end;
   gap: 0.5rem;
 }
+
+// Estilos para las estrellas de valoración
+.rating-stars {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 0;
+
+  .star-icon {
+    font-size: 32px;
+    padding: 0 5px;
+    color: #ffc107; // Color amarillo para estrellas
+    cursor: pointer;
+
+    &:hover {
+      transform: scale(1.2);
+      transition: transform 0.2s;
+    }
+  }
+
+  p {
+    margin-left: 10px;
+  }
+}
+
+// Estilo para las valoraciones en la sección de perfil
+.user-reviews {
+  margin-top: 20px;
+
+  .review-item {
+    margin-bottom: 15px;
+    padding: 10px;
+    border-radius: 8px;
+    background-color: #f8f8f8;
+
+    .review-stars {
+      display: flex;
+      color: #ffc107;
+
+      ion-icon {
+        font-size: 20px;
+        margin-right: 2px;
+      }
+    }
+
+    .review-date {
+      font-size: 12px;
+      color: #666;
+    }
+  }
+}

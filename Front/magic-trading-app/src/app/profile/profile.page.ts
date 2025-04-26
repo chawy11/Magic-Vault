@@ -19,6 +19,7 @@ import {
   IonSelect,
   IonSelectOption,
   IonSegment,
+  IonCardSubtitle,
   IonSegmentButton,
   IonSearchbar,
   IonIcon,
@@ -34,7 +35,7 @@ import {
   IonCardHeader,
   IonCardTitle,
   IonCardContent,
-  IonCheckbox, IonBadge
+  IonCheckbox, IonBadge, IonTextarea
 } from '@ionic/angular/standalone';
 import { AlertController } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
@@ -44,6 +45,32 @@ import {RouterLink} from "@angular/router";
 import { ActivatedRoute } from '@angular/router';
 import { ToastController } from '@ionic/angular/standalone';
 import {TransactionService} from "../services/transaction.service";
+
+interface Transaction {
+  _id: string;
+  buyerId: string;
+  sellerId: string;
+  buyerUsername: string;
+  sellerUsername: string;
+  buyerWants: any[];
+  sellerWants: any[];
+  status: string;
+  createdAt: Date;
+  completedAt?: Date;
+  buyerConfirmed?: boolean;
+  sellerConfirmed?: boolean;
+  buyerReview?: {
+    rating: number;
+    comment: string;
+    date: Date;
+  };
+  sellerReview?: {
+    rating: number;
+    comment: string;
+    date: Date;
+  };
+  reviewsCompleted?: boolean;
+}
 
 @Component({
   selector: 'app-profile',
@@ -55,8 +82,8 @@ import {TransactionService} from "../services/transaction.service";
     FormsModule,
     IonHeader, IonToolbar, IonTitle, IonContent, IonItem,
     IonLabel, IonList, IonButton, IonInput, IonSelect, IonSelectOption,
-    IonSegment, IonSegmentButton, IonSearchbar, IonIcon, IonFab, IonFabButton,
-    IonModal, IonGrid, IonRow, IonCol, IonToggle, IonButtons, RouterLink, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonCheckbox, IonBadge
+    IonSegment, IonCardSubtitle, IonSegmentButton, IonSearchbar, IonIcon, IonFab, IonFabButton,
+    IonModal, IonGrid, IonRow, IonCol, IonToggle, IonButtons, RouterLink, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonCheckbox, IonBadge, IonTextarea
   ]
 })
 export class ProfilePage implements OnInit {
@@ -81,6 +108,12 @@ export class ProfilePage implements OnInit {
   viewedUserId: string = '';
   transactions: any[] = [];
   currentUserId: string = '';
+  reviewModalOpen: boolean = false;
+  currentReviewTransaction: any = null;
+  currentReviewRating: number = 0;
+  currentReviewComment: string = '';
+  reviews: any[] = [];
+
   matches = {
     wantsMatches: 0,
     wantsTotal: 0,
@@ -105,23 +138,17 @@ export class ProfilePage implements OnInit {
 
   ngOnInit(): void {
     this.route.params.subscribe(params => {
-      if (params['username']) {
-        this.viewedUsername = params['username'];
-        this.isOwnProfile = this.viewedUsername === this.currentUser;
+      this.viewedUsername = params['username'] || this.currentUser;
+      this.isOwnProfile = !params['username'] || params['username'] === this.currentUser;
 
-        if (this.isOwnProfile) {
-          this.loadProfile(); // Load own profile
-        } else {
-          this.loadOtherUserProfile(); // Load someone else's profile
-          this.loadMatches(); // Load matches between current user and viewed user
-        }
-      } else {
-        this.viewedUsername = this.currentUser;
-        this.isOwnProfile = true;
+      if (this.isOwnProfile) {
         this.loadProfile();
+        this.loadReviews();
+      } else {
+        this.loadOtherUserProfile();
+        this.loadMatches();
       }
     });
-
 
     // Obtener ID del usuario actual
     this.userProfileService.getMyProfile().subscribe(data => {
@@ -130,6 +157,44 @@ export class ProfilePage implements OnInit {
 
     // Cargar transacciones
     this.loadTransactions();
+  }
+
+  // En profile.page.ts
+
+  loadReviews(): void {
+    console.log('Cargando valoraciones...');
+
+    // Filtramos solo transacciones completadas
+    const completedTransactions = this.transactions.filter((tx: Transaction) => tx.status === 'completed');
+
+    // Extraemos las valoraciones
+    this.reviews = [];
+
+    completedTransactions.forEach((tx: Transaction) => {
+      // Si soy el vendedor y el comprador me dejó valoración
+      if (tx.sellerId === this.currentUserId && tx.buyerReview) {
+        this.reviews.push({
+          fromUsername: tx.buyerUsername,
+          rating: tx.buyerReview.rating,
+          comment: tx.buyerReview.comment,
+          date: tx.buyerReview.date,
+          cards: tx.buyerWants || []
+        });
+      }
+
+      // Si soy el comprador y el vendedor me dejó valoración
+      if (tx.buyerId === this.currentUserId && tx.sellerReview) {
+        this.reviews.push({
+          fromUsername: tx.sellerUsername,
+          rating: tx.sellerReview.rating,
+          comment: tx.sellerReview.comment,
+          date: tx.sellerReview.date,
+          cards: tx.sellerWants || []
+        });
+      }
+    });
+
+    console.log(`${this.reviews.length} valoraciones cargadas`);
   }
 
   loadTransactions(): void {
@@ -645,17 +710,66 @@ export class ProfilePage implements OnInit {
     );
   }
 
+  // Método para abrir el modal de reseñas
+  // En profile.page.ts, modifica el método openReviewModal
+  openReviewModal(transaction: any): void {
+    if (!transaction) return; // Prevenir errores con transacciones nulas
+
+    this.currentReviewTransaction = transaction;
+    this.currentReviewRating = 0;
+    this.currentReviewComment = '';
+    this.reviewModalOpen = true; // Mover esta línea al final después de inicializar los valores
+  }
+
+// Método para cerrar el modal
+  closeReviewModal(): void {
+    this.reviewModalOpen = false;
+    this.currentReviewTransaction = null;
+  }
+
+// Método para establecer la valoración
+  setReviewRating(stars: number): void {
+    this.currentReviewRating = stars;
+  }
+
+// Método para enviar la reseña
+  submitReview(): void {
+    if (!this.currentReviewTransaction || !this.currentReviewRating) {
+      return;
+    }
+
+    this.transactionService.addReview(
+      this.currentReviewTransaction._id,
+      this.currentReviewRating,
+      this.currentReviewComment
+    ).subscribe(
+      response => {
+        this.presentToast('Valoración enviada correctamente');
+        this.closeReviewModal();
+        // Actualizar la lista de transacciones para reflejar la nueva reseña
+        this.loadTransactions();
+      },
+      error => {
+        console.error('Error al enviar valoración:', error);
+        this.presentToast('Error al enviar la valoración: ' +
+          (error.error?.message || 'Error desconocido'));
+      }
+    );
+  }
+
   // Añade este método a tu clase ProfilePage
   ionViewDidEnter() {
     console.log('🔄 ionViewDidEnter EJECUTADO!');
 
     if (this.isOwnProfile) {
       this.loadProfile();
+      // Esto cargará las valoraciones desde las transacciones
+      this.loadTransactions();
+      // Llamamos loadReviews después de cargar las transacciones
+      setTimeout(() => this.loadReviews(), 300);
     } else {
       this.loadOtherUserProfile();
       this.loadMatches();
     }
-
-    this.loadTransactions();
   }
 }

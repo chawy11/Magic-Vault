@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../services/auth.service';
 import { Router, RouterLink } from '@angular/router';
-import { CommonModule } from '@angular/common';
+import {CommonModule, NgOptimizedImage} from '@angular/common';
 import { CustomValidators } from '../validators/form-validators';
 import {
   IonButton,
@@ -31,9 +31,10 @@ import {
     IonLabel,
     IonButton,
     RouterLink,
-    IonNote
+    IonNote,
   ]
 })
+
 export class RegistroPage {
   registroForm: FormGroup;
   campoTocado: { [key: string]: boolean } = {}; // Para rastrear si un campo ha sido tocado

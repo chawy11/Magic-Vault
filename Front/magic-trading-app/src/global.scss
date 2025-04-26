@@ -35,3 +35,16 @@
 /* @import "@ionic/angular/css/palettes/dark.always.css"; */
 /* @import "@ionic/angular/css/palettes/dark.class.css"; */
 @import '@ionic/angular/css/palettes/dark.system.css';
+
+/* Front/magic-trading-app/src/global.scss */
+ion-button {
+  --background: #10dc60;
+  --color: #ffffff;
+  --border-radius: 12px !important;
+  --padding-start: 16px;
+  --padding-end: 16px;
+  width: calc(100% - 6px);
+  font-size: 16px;
+  font-weight: bold;
+  box-shadow: none;
+}
