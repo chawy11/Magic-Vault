@@ -37,8 +37,8 @@ import {
 
 export class RegistroPage {
   registroForm: FormGroup;
-  campoTocado: { [key: string]: boolean } = {}; // Para rastrear si un campo ha sido tocado
-  errorMessage: { [key: string]: string } = {}; // Propiedad para manejar los mensajes de error específicos
+  campoTocado: { [key: string]: boolean } = {};
+  errorMessage: { [key: string]: string } = {};
 
   constructor(
     private fb: FormBuilder,
@@ -46,7 +46,7 @@ export class RegistroPage {
     private router: Router
   ) {
     this.registroForm = this.fb.group({
-      usuario: ['', [Validators.required, Validators.minLength(5)]],
+      usuario: ['', [Validators.required, Validators.minLength(5), CustomValidators.usernameFormat()]],
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(6), CustomValidators.passwordStrength()]],
     });

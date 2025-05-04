@@ -1,7 +1,6 @@
-
 <ion-header>
   <ion-toolbar>
-    <ion-title>Magic Trading</ion-title>
+    <ion-title>Magic Vault</ion-title>
     <ion-buttons slot="end">
       <ion-button (click)="irAPerfil()">
         <ion-icon name="person-circle-outline"></ion-icon>
@@ -16,16 +15,16 @@
 
 <ion-content class="ion-padding">
   <div class="container">
-    <h1 class="ion-text-center">¡Bienvenido a la aplicación!</h1>
+    <h1 class="ion-text-center">¡Bienvenido a Magic Vault!</h1>
 
     <!-- Campo de búsqueda -->
     <div class="search-container">
       <ion-item>
         <ion-input [(ngModel)]="nombreCarta"
-        type="text"
-        placeholder="Buscar carta"
-        (ionInput)="onInputChange($event.detail.value ?? '')"
-        (keyup.enter)="buscarCarta($event)">
+                   type="text"
+                   placeholder="Buscar carta"
+                   (ionInput)="onInputChange($event.detail.value ?? '')"
+                   (keyup.enter)="buscarCarta($event)">
         </ion-input>
         <ion-icon name="search" slot="start"></ion-icon>
       </ion-item>
@@ -34,7 +33,10 @@
       @if (searchResults.length > 0 && !loading) {
         <ion-list>
           @for (carta of searchResults; track carta.id) {
-            <ion-item (click)="seleccionarCarta(carta)">
+            <ion-item
+              (click)="seleccionarCarta(carta)"
+              (mouseenter)="mostrarPreview(carta, $event)"
+              (mouseleave)="ocultarPreview()">
               <ion-label>{{ carta.name }}</ion-label>
             </ion-item>
           }
@@ -47,4 +49,15 @@
       }
     </div>
   </div>
+
+  <!-- Previsualización de la carta -->
+  @if (cartaPreview) {
+    <div class="card-preview" [style.top.px]="previewPosition.top" [style.left.px]="previewPosition.left">
+      <img [src]="cartaPreview.image_uris?.small || cartaPreview.card_faces?.[0]?.image_uris?.small" alt="{{ cartaPreview.name }}">
+    </div>
+  }
+
+  <!--  <ion-button (click)="escanearCarta()" *ngIf="ocrService.isOnMobile()">-->
+  <!--    Escanear carta-->
+  <!--  </ion-button>-->
 </ion-content>

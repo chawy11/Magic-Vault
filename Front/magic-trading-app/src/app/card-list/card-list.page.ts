@@ -1,6 +1,6 @@
 // Front/magic-trading-app/src/app/card-list/card-list.page.ts
 import { Component, OnInit } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import {ActivatedRoute, Router, RouterLink} from '@angular/router';
 import { ScryfallService } from '../services/scryfall.service';
 import { UserprofileService } from '../services/userprofile.service';
 import { AlertController } from '@ionic/angular';
@@ -9,11 +9,17 @@ import {
   IonCol, IonContent, IonGrid, IonHeader,
   IonItem, IonLabel, IonList, IonRow,
   IonSpinner, IonTitle, IonToolbar, IonButton,
-  IonIcon, IonActionSheet
+  IonIcon, IonActionSheet, IonButtons
 } from "@ionic/angular/standalone";
 import { CommonModule } from '@angular/common';
 import { addIcons } from 'ionicons';
-import { ellipsisVertical, addCircle, cartOutline } from 'ionicons/icons';
+import {
+  addCircle,
+  cartOutline,
+  personCircleOutline,
+  arrowBackOutline,
+  ellipsisHorizontalOutline
+} from 'ionicons/icons';
 import { lastValueFrom } from 'rxjs';
 
 @Component({
@@ -34,7 +40,10 @@ import { lastValueFrom } from 'rxjs';
     IonCardTitle,
     IonCardContent,
     IonIcon,
-    CommonModule
+    CommonModule,
+    IonButtons,
+    IonButton,
+    RouterLink
   ]
 })
 export class CardListPage implements OnInit {
@@ -49,7 +58,7 @@ export class CardListPage implements OnInit {
     private userProfileService: UserprofileService,
     private alertController: AlertController
   ) {
-    addIcons({ ellipsisVertical, addCircle, cartOutline });
+    addIcons({ ellipsisHorizontalOutline, addCircle, cartOutline, personCircleOutline, arrowBackOutline });
   }
 
   ngOnInit(): void {
@@ -216,5 +225,9 @@ export class CardListPage implements OnInit {
     });
 
     await alert.present();
+  }
+
+  irAPerfil(): void {
+    this.router.navigate(['/profile']);
   }
 }

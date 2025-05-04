@@ -37,8 +37,8 @@ import {
 })
 export class LoginPage {
   loginForm: FormGroup;
-  campoTocado: { [key: string]: boolean } = {}; // Para rastrear si un campo ha sido tocado
-  mensajeError: string = ''; // Variable para manejar el mensaje de error
+  campoTocado: { [key: string]: boolean } = {};
+  mensajeError: string = '';
 
   constructor(
     private fb: FormBuilder,
@@ -46,45 +46,44 @@ export class LoginPage {
     private router: Router
   ) {
     this.loginForm = this.fb.group({
-      usuario: ['', [Validators.required]], // Validación para 'usuario'
-      password: ['', [Validators.required]], // Validación para 'password'
+      usuario: ['', [Validators.required]],
+      password: ['', [Validators.required]],
     });
   }
 
-  // Método para manejar el evento blur
+
   onBlur(campo: string) {
-    this.campoTocado[campo] = true; // Marca el campo como tocado
+    this.campoTocado[campo] = true;
   }
 
-  // Método para mostrar errores
+
   mostrarError(campo: string): boolean {
     return (this.loginForm.get(campo)?.invalid ?? false) && this.campoTocado[campo];
   }
 
-  // Enviar el formulario de inicio de sesión
+
   onSubmit() {
-    // Marca todos los campos como tocados
     Object.keys(this.loginForm.controls).forEach((campo) => {
       this.campoTocado[campo] = true;
     });
 
-    // Si el formulario es inválido, no se envía
     if (this.loginForm.invalid) {
       return;
     }
 
     // Enviar la solicitud de login al backend
-    this.authService.login(this.loginForm.value).subscribe(
-      (response: any) => {
+    this.authService.login(this.loginForm.value).subscribe({
+      next: (response: any) => {
         console.log('Inicio de sesión exitoso', response);
-        this.authService.guardarToken(response.token, response.usuario); // Pass both token and username
+        this.authService.guardarToken(response.token, this.loginForm.value.usuario);
         this.router.navigate(['/home']);
       },
-      (error) => {
+      error: (error) => {
         console.error('Error en el inicio de sesión', error);
-        this.mensajeError = error.error.message || 'Usuario o contraseña incorrectos';
-        this.loginForm.reset(); // Resetea el formulario para volver a intentarlo
+        // Accedemos directamente a error.message ya que handleError ya construyó el mensaje
+        this.mensajeError = error.message || 'Error de autenticación';
+        this.loginForm.reset();
       }
-    );
+    });
   }
 }

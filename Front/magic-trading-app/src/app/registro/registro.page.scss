@@ -4,8 +4,8 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  width: 400px; /* Ancho máximo del formulario */
-  margin: 0 auto;   /* Centra el formulario horizontalmente */
+  width: 400px;
+  margin: 0 auto;
   padding: 18px 16px;
   border: 9px solid gold;
   position: relative;
@@ -29,7 +29,6 @@
 }
 
 .middle-block{
-  background: red;
   margin: 0 2px;
 }
 

@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import {ActivatedRoute, Router, RouterLink} from '@angular/router';
 import { ScryfallService } from '../services/scryfall.service';
 import { UserprofileService } from '../services/userprofile.service';
 import {
@@ -11,10 +11,10 @@ import {
   IonTitle,
   IonToolbar,
   IonButton,
-  IonIcon
+  IonIcon, IonButtons
 } from "@ionic/angular/standalone";
 import { addIcons } from 'ionicons';
-import { ellipsisVertical, add } from 'ionicons/icons';
+import { add, personCircleOutline, arrowBackOutline, ellipsisHorizontalOutline} from 'ionicons/icons';
 import { AlertController } from '@ionic/angular/standalone';
 import { lastValueFrom } from 'rxjs';
 
@@ -31,7 +31,10 @@ import { lastValueFrom } from 'rxjs';
     IonCardHeader,
     IonCardTitle,
     IonCardContent,
-    IonIcon
+    IonIcon,
+    IonButtons,
+    IonButton,
+    RouterLink
   ]
 })
 export class CardDetailsPage implements OnInit {
@@ -39,11 +42,12 @@ export class CardDetailsPage implements OnInit {
 
   constructor(
     private route: ActivatedRoute,
+    private router: Router,
     private scryfallService: ScryfallService,
     private userProfileService: UserprofileService,
     private alertController: AlertController
   ) {
-    addIcons({ ellipsisVertical, add });
+    addIcons({ ellipsisHorizontalOutline, add, personCircleOutline, arrowBackOutline });
   }
 
   ngOnInit(): void {
@@ -200,5 +204,9 @@ export class CardDetailsPage implements OnInit {
     });
 
     await alert.present();
+  }
+
+  irAPerfil(): void {
+    this.router.navigate(['/profile']);
   }
 }

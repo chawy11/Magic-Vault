@@ -1,6 +1,16 @@
 <ion-header>
   <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button routerLink="/home">
+        <ion-icon name="arrow-back-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
     <ion-title>Resultados de búsqueda</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="irAPerfil()">
+        <ion-icon name="person-circle-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
@@ -21,7 +31,7 @@
             <ion-card class="card" (click)="irADetalle(carta)">
               <!-- Opciones (tres puntos) -->
               <div class="options-button" (click)="mostrarOpciones(carta, $event)">
-                <ion-icon name="ellipsisVertical"></ion-icon>
+                <ion-icon name="ellipsis-horizontal-outline"></ion-icon>
               </div>
 
               <!-- Imagen de la carta -->

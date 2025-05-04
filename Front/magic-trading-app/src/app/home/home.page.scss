@@ -23,3 +23,24 @@ ion-button {
   margin-top: 16px; /* Espacio entre el botón y los resultados */
 }
 
+/* Añade esto a home.page.scss */
+ion-list ion-item {
+  cursor: pointer; /* Cambia el cursor a puntero */
+}
+
+.card-preview {
+  position: fixed;
+  z-index: 1000;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  background: white;
+  padding: 5px;
+  pointer-events: none; /* Para que no interfiera con clicks */
+
+  img {
+    border-radius: 4px;
+    width: 200px;
+    height: auto;
+  }
+}
+

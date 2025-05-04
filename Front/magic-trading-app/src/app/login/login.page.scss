@@ -1,29 +1,73 @@
 .form-container {
-  max-width: 400px; /* Ancho máximo del formulario */
-  margin: 0 auto;   /* Centra el formulario horizontalmente */
-  padding: 20px;    /* Espaciado interno */
+  background: #202020;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  width: 400px;
+  margin: 0 auto;
+  padding: 18px 16px;
+  border: 9px solid gold;
+  position: relative;
 }
 
-ion-item {
-  margin-bottom: 15px; /* Espacio entre los campos del formulario */
+.content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  width: 100%;
+}
+
+.logo-page {
+  display: flex;
+  width: 100%;
+  margin-bottom: 16px;
+  justify-content: center;
+  height: 280px;
+  object-fit: fill;
+}
+
+.middle-block {
+  margin: 0 2px;
+}
+
+.w-full {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  position: absolute;
+  left: 0;
 }
 
 ion-button {
-  margin-top: 20px; /* Espacio arriba del botón */
+  margin: 12px 2px;
 }
 
 p {
-  font-size: 14px; /* Tamaño del texto del enlace */
-  color: #666;     /* Color del texto */
+  font-size: 14px;
+  color: #666;
 }
 
 a {
-  color: var(--ion-color-primary); /* Color del enlace (puedes cambiarlo) */
-  text-decoration: none; /* Quita el subrayado del enlace */
+  color: var(--ion-color-primary);
+  text-decoration: none;
 }
 
 a:hover {
-  text-decoration: underline; /* Subraya el enlace al pasar el ratón */
+  text-decoration: underline;
+}
+
+.floating-text {
+  position: absolute;
+  right: 100px;
+  bottom: -9px;
+}
+
+.end-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 ion-note {

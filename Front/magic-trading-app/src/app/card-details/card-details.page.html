@@ -1,6 +1,16 @@
 <ion-header>
   <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button routerLink="/home">
+        <ion-icon name="arrow-back-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
     <ion-title>{{ carta?.name }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="irAPerfil()">
+        <ion-icon name="person-circle-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
@@ -9,7 +19,7 @@
     <div class="card-container">
       <!-- Opciones (tres puntos) -->
       <div class="options-button" (click)="mostrarOpciones($event)">
-        <ion-icon name="ellipsisVertical"></ion-icon>
+        <ion-icon name="ellipsis-horizontal-outline"></ion-icon>
       </div>
 
       <img [src]="carta.image_uris?.normal" alt="{{ carta.name }}">

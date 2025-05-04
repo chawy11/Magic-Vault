@@ -1,7 +1,6 @@
 // src/app/profile/profile.page.ts
 
 import { Component, OnInit } from '@angular/core';
-import { IonicModule } from '@ionic/angular';
 import { UserprofileService } from '../services/userprofile.service';
 import { ScryfallService } from '../services/scryfall.service';
 import { CommonModule } from '@angular/common';
@@ -39,7 +38,7 @@ import {
 } from '@ionic/angular/standalone';
 import { AlertController } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { search, add, create, close, trash, ellipsisVertical, arrowBack, share } from 'ionicons/icons';
+import {search, add, create, close, trash, ellipsisVertical, arrowBack, share, star, starOutline} from 'ionicons/icons';
 import { lastValueFrom } from 'rxjs';
 import {RouterLink} from "@angular/router";
 import { ActivatedRoute } from '@angular/router';
@@ -130,7 +129,7 @@ export class ProfilePage implements OnInit {
     private transactionService: TransactionService,
 
   ) {
-    addIcons({ search, add, create, close, trash, ellipsisVertical, arrowBack, share });
+    addIcons({ search, add, create, close, trash, ellipsisVertical, arrowBack, share, star, starOutline });
     this.currentUser = localStorage.getItem('usuario') || '';
   }
 
