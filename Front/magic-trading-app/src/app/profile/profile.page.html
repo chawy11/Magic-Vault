@@ -245,12 +245,17 @@
           </ion-button>
         </div>
         <!-- Botón de confirmar, si está pendiente y no ha sido confirmada por este usuario -->
-        <ion-button *ngIf="tx.status === 'pending' &&
+        <div>
+          <ion-button class="review-button"
+                      *ngIf="tx.status === 'pending' &&
                           ((tx.buyerId === currentUserId && !tx.buyerConfirmed) ||
                            (tx.sellerId === currentUserId && !tx.sellerConfirmed))"
-                    (click)="confirmTransaction(tx._id)">
-          Confirmar
-        </ion-button>
+                      color="tertiary"
+                      (click)="confirmTransaction(tx._id)">
+            Confirmar
+          </ion-button>
+        </div>
+
 
         <!-- Estado de confirmación -->
         <ion-badge *ngIf="tx.status === 'pending'" color="warning">
