@@ -2,6 +2,7 @@
 
 .search-container {
   margin: 1rem 0;
+  width: 100%;
 }
 
 .search-results {
@@ -12,6 +13,22 @@
   border-radius: 8px;
 }
 
+.main-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  > * {
+    width: 70%;
+    max-width: 800px;
+    margin: 0 auto;
+
+    @media (max-width: 768px) {
+      width: 90%;
+    }
+  }
+}
+
 h2 {
   margin-top: 1rem;
   color: var(--ion-color-primary);
@@ -19,8 +36,21 @@ h2 {
 }
 
 ion-item {
-  --padding-start: 0;
-  margin-bottom: 0.5rem;
+  --padding-start: 8px;
+  --padding-end: 8px;
+  --inner-padding-end: 8px;
+
+  .card-actions {
+    display: flex;
+    flex-shrink: 0;
+
+    ion-button {
+      --padding-start: 4px;
+      --padding-end: 4px;
+      margin: 0 2px;
+      width: auto;
+    }
+  }
 }
 
 ion-fab-button {
@@ -28,10 +58,37 @@ ion-fab-button {
   --box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
-.card-options {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
+/* Ajustes para el segment */
+ion-segment {
+  width: 70%;
+  max-width: 800px;
+  margin: 0 auto;
+
+  @media (max-width: 768px) {
+    width: 90%;
+  }
+}
+
+/* Ajustes para la tarjeta de coincidencias */
+ion-card {
+  width: 70%;
+  max-width: 800px;
+  margin: 16px auto;
+
+  @media (max-width: 768px) {
+    width: 90%;
+  }
+}
+
+/* Ajuste para el botón de intercambio */
+ion-button[expand="block"] {
+  width: 70%;
+  max-width: 800px;
+  margin: 16px auto;
+
+  @media (max-width: 768px) {
+    width: 90%;
+  }
 }
 
 // Estilos para las estrellas de valoración
@@ -67,8 +124,7 @@ ion-fab-button {
     margin-bottom: 15px;
     padding: 10px;
     border-radius: 8px;
-    background-color: #f8f8f8;
-
+    width: 100%;
     .review-stars {
       display: flex;
       color: #ffc107;
@@ -85,3 +141,61 @@ ion-fab-button {
     }
   }
 }
+
+.user-transactions {
+  margin-top: 20px;
+  border-radius: 8px;
+  border: 1px solid var(--ion-color-light);
+  background-color: var(--ion-color-light-shade);
+  padding: 5px;
+  overflow: hidden;
+
+  .transaction-item {
+    margin-bottom: 15px;
+    padding: 10px;
+    width: 100%;
+  }
+  .transaction-label {
+    padding-left: 10px;
+  }
+}
+
+.valuations{
+  display: flex;
+  justify-content: center;
+}
+
+.review-button {
+  width: calc(100% - 9px);
+  display: block;
+  font-size: 11px;
+  --padding-start: 16px;
+  --padding-end: 16px;
+}
+
+// Cambia el cursor al pasar sobre cartas
+.card-item {
+  cursor: pointer;
+}
+
+// Estilo para reducir opacidad al pasar el cursor
+.card-item:hover {
+  background-color: var(--ion-color-light);
+}
+
+
+/* src/app/profile/profile.page.scss */
+.card-preview {
+  position: fixed;
+  z-index: 1000;
+  border-radius: 8px;
+  padding: 5px;
+  pointer-events: none;
+
+  img {
+    width: 200px; // Ancho fijo como en home
+    height: auto;
+    border-radius: 4px;
+  }
+}
+

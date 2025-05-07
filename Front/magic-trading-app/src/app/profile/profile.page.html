@@ -1,5 +1,3 @@
-<!-- src/app/profile/profile.page.html -->
-
 <ion-header>
   <ion-toolbar>
     <ion-buttons slot="start">
@@ -114,154 +112,48 @@
   </ion-segment-button>
 </ion-segment>
 
-<!-- Lista de transacciones -->
-<div *ngIf="activeSegment === 'transactions'">
-  <h2>Mis Transacciones</h2>
-
-  <ion-list *ngIf="transactions.length > 0">
-    <ion-item *ngFor="let tx of transactions">
-      <ion-label>
-        <h2>Transacción con {{ tx.buyerId === currentUserId ? tx.sellerUsername : tx.buyerUsername }}</h2>
-        <p>Estado: {{ tx.status === 'pending' ? 'Pendiente' : 'Completada' }}</p>
-        <p>Fecha: {{ tx.createdAt | date:'dd/MM/yyyy HH:mm' }}</p>
-
-        <!-- Detalles de la transacción -->
-        <div *ngIf="tx.buyerWants.length > 0">
-          <p><strong>Cartas que quieres:</strong></p>
-          <ul>
-            <li *ngFor="let card of tx.buyerWants">{{ card.cardName }}</li>
-          </ul>
-        </div>
-
-        <div *ngIf="tx.sellerWants.length > 0">
-          <p><strong>Cartas que ofreces:</strong></p>
-          <ul>
-            <li *ngFor="let card of tx.sellerWants">{{ card.cardName }}</li>
-          </ul>
-        </div>
-
-        <!-- Nueva sección para reseñas -->
-        <div *ngIf="tx.status === 'completed'">
-          <!-- Botón para dejar valoración cuando no se ha dejado aún -->
-          <ion-button
-            *ngIf="(tx.buyerId === currentUserId && !tx.buyerReview) ||
-           (tx.sellerId === currentUserId && !tx.sellerReview)"
-            size="small"
-            color="tertiary"
-            (click)="openReviewModal(tx)">
-            Dejar valoración
-          </ion-button>
-
-          <!-- Indicador de valoración enviada -->
-          <ion-badge
-            *ngIf="(tx.buyerId === currentUserId && tx.buyerReview) ||
-           (tx.sellerId === currentUserId && tx.sellerReview)"
-            color="success">
-            Valoración enviada
-          </ion-badge>
-        </div>
-      </ion-label>
-
-      <!-- Botón de confirmar, si está pendiente y no ha sido confirmada por este usuario -->
-      <ion-button *ngIf="tx.status === 'pending' &&
-                        ((tx.buyerId === currentUserId && !tx.buyerConfirmed) ||
-                         (tx.sellerId === currentUserId && !tx.sellerConfirmed))"
-                  (click)="confirmTransaction(tx._id)">
-        Confirmar
-      </ion-button>
-
-      <!-- Estado de confirmación -->
-      <ion-badge *ngIf="tx.status === 'pending'" color="warning">
-        {{ getConfirmationStatus(tx) }}
-      </ion-badge>
-
-      <ion-badge *ngIf="tx.status === 'completed'" color="success">
-        Completada
-      </ion-badge>
-    </ion-item>
-  </ion-list>
-
-  <div *ngIf="transactions.length === 0" class="ion-text-center ion-padding">
-    <p>No tienes transacciones pendientes</p>
-  </div>
-</div>
-
-<!-- Sección de Valoraciones -->
-<div *ngIf="activeSegment === 'reviews'">
-  <h2>Mis Valoraciones</h2>
-
-  <div *ngIf="reviews.length === 0" class="ion-text-center ion-padding">
-    <p>No tienes valoraciones todavía</p>
-  </div>
-
-  <div *ngIf="reviews.length > 0" class="user-reviews">
-    <ion-card *ngFor="let review of reviews" class="review-item">
-      <ion-card-header>
-        <ion-card-title>
-          <div class="ion-float-end review-stars">
-            <ion-icon *ngFor="let star of [1, 2, 3, 4, 5]"
-                      [name]="star <= review.rating ? 'star' : 'star-outline'">
-            </ion-icon>
-          </div>
-          {{ review.fromUsername }}
-        </ion-card-title>
-        <ion-card-subtitle class="review-date">
-          {{ review.date | date:'dd/MM/yyyy' }}
-        </ion-card-subtitle>
-      </ion-card-header>
-
-      <ion-card-content>
-        <p *ngIf="review.comment">{{ review.comment }}</p>
-        <p *ngIf="!review.comment" class="ion-text-italic">Sin comentarios</p>
-
-        <div class="transaction-details">
-          <p><strong>Cartas intercambiadas:</strong></p>
-          <ul *ngIf="review.cards && review.cards.length > 0">
-            <li *ngFor="let card of review.cards">
-              {{ card.cardName }}
-            </li>
-          </ul>
-          <p *ngIf="!review.cards || review.cards.length === 0">Ninguna carta registrada</p>
-        </div>
-      </ion-card-content>
-    </ion-card>
-  </div>
-</div>
-
-<!-- Rest of your profile page content -->
-
-<ion-content class="ion-padding">
-  <!-- Segment para alternar entre wants y sells -->
-  <ion-segment [(ngModel)]="activeSegment" (ionChange)="segmentChanged($event)">
-    <ion-segment-button value="wants">
-      <ion-label>Wants</ion-label>
-    </ion-segment-button>
-    <ion-segment-button value="sells">
-      <ion-label>Sells</ion-label>
-    </ion-segment-button>
-  </ion-segment>
-
+<ion-content class="ion-padding main-content">
   <!-- Barra de búsqueda (visible cuando showSearch es true) -->
-  <div *ngIf="showSearch" class="search-container">
-    <ion-searchbar [(ngModel)]="searchTerm" (ionInput)="searchCards()" placeholder="Buscar cartas..."></ion-searchbar>
-    <div *ngIf="searchResults.length > 0" class="search-results">
-      <ion-list>
-        <ion-item *ngFor="let card of searchResults" button (click)="activeSegment === 'wants' ? addCardToWants(card) : addCardToSells(card)">
-          <ion-label>{{ card.name }}</ion-label>
-          <ion-icon slot="end" [name]="activeSegment === 'wants' ? 'add' : 'create'"></ion-icon>
-        </ion-item>
-      </ion-list>
-    </div>
-    <div *ngIf="loading" class="ion-text-center">
-      <p>Cargando resultados...</p>
-    </div>
+  <!-- Barra de búsqueda (siempre visible) -->
+  <div class="search-container">
+    <ion-searchbar [(ngModel)]="searchTerm" (ionInput)="searchCards()" placeholder="Añadir cartas..."></ion-searchbar>
+    <!-- Resultados de búsqueda con @if y @for -->
+    @if (searchResults.length > 0) {
+      <div class="search-results">
+        <ion-list>
+          @for (card of searchResults; track card.id) {
+            <ion-item
+              (click)="activeSegment === 'wants' ? addCardToWants(card) : addCardToSells(card)"
+              (mouseenter)="mostrarPreview(card, $event)"
+              (mouseleave)="ocultarPreview()"
+              class="card-item">
+              <ion-label>{{ card.name }}</ion-label>
+            </ion-item>
+          }
+        </ion-list>
+      </div>
+    }
+
+    @if (loading) {
+      <div class="ion-text-center">
+        <p>Cargando resultados...</p>
+      </div>
+    }
+
+    @if (cartaPreview) {
+      <div class="card-preview" [style.top.px]="previewPosition.top" [style.left.px]="previewPosition.left">
+        <img [src]="cartaPreview.image_uris?.small || cartaPreview.card_faces?.[0]?.image_uris?.small" alt="{{ cartaPreview.name }}">
+      </div>
+    }
   </div>
+
+
 
   <!-- Lista de Wants -->
   <div *ngIf="activeSegment === 'wants'">
     <h2>Mi lista de Wants</h2>
-    <ion-list *ngIf="wantsList.length > 0">
-      <ion-item *ngFor="let card of wantsList">
+    <div *ngIf="wantsList.length > 0" class="user-transactions">
+      <ion-item *ngFor="let card of wantsList" class="transaction-item">
         <ion-label>
           <h2>{{ card.cardName }}</h2>
           <p>Cantidad: {{ card.quantity || 1 }}</p>
@@ -270,14 +162,16 @@
           <p>Foil: {{ card.foil ? 'Sí' : 'No' }}</p>
           <p>Precio: {{ card.price ? (card.price + ' €') : 'N/A' }}</p>
         </ion-label>
-        <ion-button fill="clear" (click)="editCard(card, 'wants')">
-          <ion-icon slot="icon-only" name="create"></ion-icon>
-        </ion-button>
-        <ion-button fill="clear" color="danger" (click)="removeCardFromWants(card.cardId)">
-          <ion-icon slot="icon-only" name="trash"></ion-icon>
-        </ion-button>
+        <div class="card-actions">
+          <ion-button fill="clear" size="small" (click)="editCard(card, 'wants')">
+            <ion-icon slot="icon-only" name="create"></ion-icon>
+          </ion-button>
+          <ion-button fill="clear" size="small" color="danger" (click)="removeCardFromWants(card.cardId)">
+            <ion-icon slot="icon-only" name="trash"></ion-icon>
+          </ion-button>
+        </div>
       </ion-item>
-    </ion-list>
+    </div>
     <div *ngIf="wantsList.length === 0" class="ion-text-center ion-padding">
       <p>No tienes cartas en tu lista de Wants</p>
     </div>
@@ -286,8 +180,8 @@
   <!-- Lista de Sells -->
   <div *ngIf="activeSegment === 'sells'">
     <h2>Mi lista de Sells</h2>
-    <ion-list *ngIf="sellsList.length > 0">
-      <ion-item *ngFor="let card of sellsList">
+    <div *ngIf="sellsList.length > 0" class="user-transactions">
+      <ion-item *ngFor="let card of sellsList" class="transaction-item">
         <ion-label>
           <h2>{{ card.cardName }}</h2>
           <p>Cantidad: {{ card.quantity || 1 }}</p>
@@ -296,25 +190,126 @@
           <p>Foil: {{ card.foil ? 'Sí' : 'No' }}</p>
           <p>Precio: {{ card.price || 0 }}€</p>
         </ion-label>
-        <ion-button fill="clear" (click)="editCard(card, 'sells')">
-          <ion-icon slot="icon-only" name="create"></ion-icon>
-        </ion-button>
-        <ion-button fill="clear" color="danger" (click)="removeCardFromSells(card.cardId)">
-          <ion-icon slot="icon-only" name="trash"></ion-icon>
-        </ion-button>
+        <div class="card-actions">
+          <ion-button fill="clear" size="small" (click)="editCard(card, 'sells')">
+            <ion-icon slot="icon-only" name="create"></ion-icon>
+          </ion-button>
+          <ion-button fill="clear" size="small" color="danger" (click)="removeCardFromSells(card.cardId)">
+            <ion-icon slot="icon-only" name="trash"></ion-icon>
+          </ion-button>
+        </div>
       </ion-item>
-    </ion-list>
+    </div>
     <div *ngIf="sellsList.length === 0" class="ion-text-center ion-padding">
       <p>No tienes cartas en tu lista de Sells</p>
     </div>
   </div>
 
-  <!-- Botón flotante para añadir cartas -->
-  <ion-fab vertical="bottom" horizontal="end" slot="fixed">
-    <ion-fab-button (click)="toggleSearch()">
-      <ion-icon [name]="showSearch ? 'close' : 'add'"></ion-icon>
-    </ion-fab-button>
-  </ion-fab>
+  <!-- Lista de transacciones -->
+  <div *ngIf="activeSegment === 'transactions'">
+    <h2>Mis Transacciones</h2>
+    <div *ngIf="transactions.length > 0" class="user-transactions">
+      <ion-item *ngFor="let tx of transactions" class="transaction-item">
+        <ion-label class="transaction-label">
+          <h2>Transacción con {{ tx.buyerId === currentUserId ? tx.sellerUsername : tx.buyerUsername }}</h2>
+          <p>Estado: {{ tx.status === 'pending' ? 'Pendiente' : 'Completada' }}</p>
+          <p>Fecha: {{ tx.createdAt | date:'dd/MM/yyyy HH:mm' }}</p>
+
+          <!-- Detalles de la transacción -->
+          <div *ngIf="tx.buyerWants.length > 0">
+            <p><strong>Cartas que quieres:</strong></p>
+            <ul>
+              <li *ngFor="let card of tx.buyerWants">{{ card.cardName }}</li>
+            </ul>
+          </div>
+
+          <div *ngIf="tx.sellerWants.length > 0">
+            <p><strong>Cartas que ofreces:</strong></p>
+            <ul>
+              <li *ngFor="let card of tx.sellerWants">{{ card.cardName }}</li>
+            </ul>
+          </div>
+
+          <!-- Nueva sección para reseñas -->
+
+        </ion-label>
+        <div *ngIf="tx.status === 'completed'">
+          <!-- Botón para dejar valoración cuando no se ha dejado aún -->
+          <ion-button class="review-button"
+                      *ngIf="(tx.buyerId === currentUserId && !tx.buyerReview) ||
+                     (tx.sellerId === currentUserId && !tx.sellerReview)"
+                      color="tertiary"
+
+                      (click)="openReviewModal(tx)">
+            Valorar
+          </ion-button>
+        </div>
+        <!-- Botón de confirmar, si está pendiente y no ha sido confirmada por este usuario -->
+        <ion-button *ngIf="tx.status === 'pending' &&
+                          ((tx.buyerId === currentUserId && !tx.buyerConfirmed) ||
+                           (tx.sellerId === currentUserId && !tx.sellerConfirmed))"
+                    (click)="confirmTransaction(tx._id)">
+          Confirmar
+        </ion-button>
+
+        <!-- Estado de confirmación -->
+        <ion-badge *ngIf="tx.status === 'pending'" color="warning">
+          {{ getConfirmationStatus(tx) }}
+        </ion-badge>
+
+        <ion-badge *ngIf="tx.status === 'completed'" color="success">
+          Completada
+        </ion-badge>
+      </ion-item>
+    </div>
+
+    <div *ngIf="transactions.length === 0" class="ion-text-center ion-padding">
+      <p>No tienes transacciones pendientes</p>
+    </div>
+  </div>
+
+  <!-- Sección de Valoraciones -->
+  <div *ngIf="activeSegment === 'reviews'">
+    <h2>Mis Valoraciones</h2>
+
+    <div *ngIf="reviews.length === 0" class="ion-text-center ion-padding">
+      <p>No tienes valoraciones todavía</p>
+    </div>
+
+    <div *ngIf="reviews.length > 0" class="user-reviews">
+      <ion-card *ngFor="let review of reviews" class="review-item">
+        <ion-card-header>
+          <ion-card-title>
+            <div class="ion-float-end review-stars">
+              <ion-icon *ngFor="let star of [1, 2, 3, 4, 5]"
+                        [name]="star <= review.rating ? 'star' : 'star-outline'">
+              </ion-icon>
+            </div>
+            {{ review.fromUsername }}
+          </ion-card-title>
+          <ion-card-subtitle class="review-date">
+            {{ review.date | date:'dd/MM/yyyy' }}
+          </ion-card-subtitle>
+        </ion-card-header>
+
+        <ion-card-content>
+          <p *ngIf="review.comment">{{ review.comment }}</p>
+          <p *ngIf="!review.comment" class="ion-text-italic">Sin comentarios</p>
+
+          <div class="transaction-details">
+            <p><strong>Cartas intercambiadas:</strong></p>
+            <ul *ngIf="review.cards && review.cards.length > 0">
+              <li *ngFor="let card of review.cards">
+                {{ card.cardName }}
+              </li>
+            </ul>
+            <p *ngIf="!review.cards || review.cards.length === 0">Ninguna carta registrada</p>
+          </div>
+        </ion-card-content>
+      </ion-card>
+    </div>
+  </div>
+
 
   <!-- Modal para editar una carta -->
   <ion-modal [isOpen]="isModalOpen">
@@ -413,4 +408,11 @@
       </ion-content>
     </ng-template>
   </ion-modal>
+
+  <!-- Previsualización de la carta -->
+  @if (cartaPreview) {
+    <div class="card-preview" [style.top.px]="previewPosition.top" [style.left.px]="previewPosition.left">
+      <img [src]="cartaPreview.image_uris?.small || cartaPreview.card_faces?.[0]?.image_uris?.small" alt="{{ cartaPreview.name }}">
+    </div>
+  }
 </ion-content>

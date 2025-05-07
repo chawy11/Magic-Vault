@@ -30,3 +30,23 @@ ion-card-title {
     color: #333;
   }
 }
+
+.card-header-content {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 5px;
+}
+
+.card-price {
+  margin: 0;
+  font-size: 14px;
+  font-weight: bold;
+  color: white;
+  text-align: center;
+}
+
+ion-card-header {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+}

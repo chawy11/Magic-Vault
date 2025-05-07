@@ -11,7 +11,7 @@ import {
   IonTitle,
   IonToolbar,
   IonButton,
-  IonIcon, IonButtons
+  IonIcon, IonButtons, ToastController
 } from "@ionic/angular/standalone";
 import { addIcons } from 'ionicons';
 import { add, personCircleOutline, arrowBackOutline, ellipsisHorizontalOutline} from 'ionicons/icons';
@@ -45,7 +45,8 @@ export class CardDetailsPage implements OnInit {
     private router: Router,
     private scryfallService: ScryfallService,
     private userProfileService: UserprofileService,
-    private alertController: AlertController
+    private alertController: AlertController,
+    private toastController: ToastController
   ) {
     addIcons({ ellipsisHorizontalOutline, add, personCircleOutline, arrowBackOutline });
   }
@@ -129,8 +130,11 @@ export class CardDetailsPage implements OnInit {
                   selectedPrint.set_name,
                   parseFloat(price) || 0
                 ).subscribe(
-                  () => this.mostrarMensajeExito('Carta añadida a wants'),
-                  error => console.error('Error al añadir carta a wants:', error)
+                  () => this.presentToast('Carta añadida a wants correctamente'),
+                  error => {
+                    this.presentToast(error.error?.message || 'Error al añadir carta a wants');
+                    console.error('Error al añadir carta a wants:', error);
+                  }
                 );
               }
             }
@@ -181,8 +185,11 @@ export class CardDetailsPage implements OnInit {
                   selectedPrint.set_name,
                   parseFloat(price) || 0
                 ).subscribe(
-                  () => this.mostrarMensajeExito('Carta añadida a sells'),
-                  error => console.error('Error al añadir carta a sells:', error)
+                  () => this.presentToast('Carta añadida a sells correctamente'),
+                  error => {
+                    this.presentToast(error.error?.message || 'Error al añadir carta a sells');
+                    console.error('Error al añadir carta a sells:', error);
+                  }
                 );
               }
             }
@@ -196,14 +203,14 @@ export class CardDetailsPage implements OnInit {
     }
   }
 
-  async mostrarMensajeExito(mensaje: string) {
-    const alert = await this.alertController.create({
-      header: 'Éxito',
-      message: mensaje,
-      buttons: ['OK']
+  async presentToast(message: string) {
+    const toast = await this.toastController.create({
+      message: message,
+      duration: 2000,
+      position: 'bottom',
+      color: 'success'
     });
-
-    await alert.present();
+    await toast.present();
   }
 
   irAPerfil(): void {

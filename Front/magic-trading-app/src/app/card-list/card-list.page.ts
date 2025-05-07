@@ -5,11 +5,10 @@ import { ScryfallService } from '../services/scryfall.service';
 import { UserprofileService } from '../services/userprofile.service';
 import { AlertController } from '@ionic/angular';
 import {
-  IonCard, IonCardContent, IonCardHeader, IonCardTitle,
-  IonCol, IonContent, IonGrid, IonHeader,
-  IonItem, IonLabel, IonList, IonRow,
+  IonCard, IonCardHeader, IonCardTitle,
+  IonCol, IonContent, IonGrid, IonHeader, IonRow,
   IonSpinner, IonTitle, IonToolbar, IonButton,
-  IonIcon, IonActionSheet, IonButtons
+  IonIcon, IonButtons, ToastController
 } from "@ionic/angular/standalone";
 import { CommonModule } from '@angular/common';
 import { addIcons } from 'ionicons';
@@ -38,7 +37,6 @@ import { lastValueFrom } from 'rxjs';
     IonCard,
     IonCardHeader,
     IonCardTitle,
-    IonCardContent,
     IonIcon,
     CommonModule,
     IonButtons,
@@ -49,14 +47,14 @@ import { lastValueFrom } from 'rxjs';
 export class CardListPage implements OnInit {
   cartas: any[] = [];
   loading: boolean = true;
-  showActions: string | null = null;
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private scryfallService: ScryfallService,
     private userProfileService: UserprofileService,
-    private alertController: AlertController
+    private alertController: AlertController,
+    private toastController: ToastController
   ) {
     addIcons({ ellipsisHorizontalOutline, addCircle, cartOutline, personCircleOutline, arrowBackOutline });
   }
@@ -144,9 +142,9 @@ export class CardListPage implements OnInit {
                   selectedPrint.set_name,
                   parseFloat(price) || 0
                 ).subscribe(
-                  () => this.presentAlert('Éxito', 'Carta añadida a wants correctamente'),
+                  () => this.presentToast('Carta añadida a wants correctamente'),
                   error => {
-                    this.presentAlert('Error', error.error?.message || 'Error al añadir carta a wants');
+                    this.presentToast(error.error?.message || 'Error al añadir carta a wants');
                     console.error('Error al añadir carta a wants:', error);
                   }
                 );
@@ -159,7 +157,6 @@ export class CardListPage implements OnInit {
       }
     } catch (error) {
       console.error('Error fetching card editions:', error);
-      this.presentAlert('Error', 'No se pudieron cargar las ediciones de la carta');
     }
   }
 
@@ -198,9 +195,9 @@ export class CardListPage implements OnInit {
                   selectedPrint.set_name,
                   parseFloat(price) || 0
                 ).subscribe(
-                  () => this.presentAlert('Éxito', 'Carta añadida a sells correctamente'),
+                  () => this.presentToast('Carta añadida a sells correctamente'),
                   error => {
-                    this.presentAlert('Error', error.error?.message || 'Error al añadir carta a sells');
+                    this.presentToast(error.error?.message || 'Error al añadir carta a sells');
                     console.error('Error al añadir carta a sells:', error);
                   }
                 );
@@ -213,19 +210,19 @@ export class CardListPage implements OnInit {
       }
     } catch (error) {
       console.error('Error fetching card editions:', error);
-      this.presentAlert('Error', 'No se pudieron cargar las ediciones de la carta');
     }
   }
 
-  async presentAlert(header: string, message: string) {
-    const alert = await this.alertController.create({
-      header,
-      message,
-      buttons: ['OK']
+  async presentToast(message: string) {
+    const toast = await this.toastController.create({
+      message: message,
+      duration: 2000,
+      position: 'bottom',
+      color: 'success'
     });
-
-    await alert.present();
+    await toast.present();
   }
+
 
   irAPerfil(): void {
     this.router.navigate(['/profile']);

@@ -81,7 +81,7 @@ interface Transaction {
     FormsModule,
     IonHeader, IonToolbar, IonTitle, IonContent, IonItem,
     IonLabel, IonList, IonButton, IonInput, IonSelect, IonSelectOption,
-    IonSegment, IonCardSubtitle, IonSegmentButton, IonSearchbar, IonIcon, IonFab, IonFabButton,
+    IonSegment, IonCardSubtitle, IonSegmentButton, IonSearchbar, IonIcon,
     IonModal, IonGrid, IonRow, IonCol, IonToggle, IonButtons, RouterLink, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonCheckbox, IonBadge, IonTextarea
   ]
 })
@@ -93,7 +93,6 @@ export class ProfilePage implements OnInit {
   searchTerm: string = '';
   searchResults: any[] = [];
   loading: boolean = false;
-  showSearch: boolean = false;
   editingCard: any = null;
   editions: string[] = [];
   languages: string[] = ['English', 'Spanish', 'French', 'German', 'Italian', 'Japanese'];
@@ -112,6 +111,8 @@ export class ProfilePage implements OnInit {
   currentReviewRating: number = 0;
   currentReviewComment: string = '';
   reviews: any[] = [];
+  cartaPreview: any = null;
+  previewPosition = { top: 0, left: 0 };
 
   matches = {
     wantsMatches: 0,
@@ -352,13 +353,6 @@ export class ProfilePage implements OnInit {
     }
   }
 
-  toggleSearch(): void {
-    this.showSearch = !this.showSearch;
-    if (!this.showSearch) {
-      this.searchTerm = '';
-      this.searchResults = [];
-    }
-  }
 
   searchCards(): void {
     if (this.searchTerm.length < 3) {
@@ -416,7 +410,8 @@ export class ProfilePage implements OnInit {
                 ).subscribe(
                   () => {
                     this.loadProfile();
-                    this.showSearch = false;
+                    this.searchResults = [];
+                    this.searchTerm = '';
                   },
                   error => console.error('Error al añadir carta a wants:', error)
                 );
@@ -470,7 +465,8 @@ export class ProfilePage implements OnInit {
                 ).subscribe(
                   () => {
                     this.loadProfile();
-                    this.showSearch = false;
+                    this.searchResults = [];
+                    this.searchTerm = '';
                   },
                   error => console.error('Error al añadir carta a sells:', error)
                 );
@@ -770,5 +766,17 @@ export class ProfilePage implements OnInit {
       this.loadOtherUserProfile();
       this.loadMatches();
     }
+  }
+
+  mostrarPreview(carta: any, event: MouseEvent) {
+    this.cartaPreview = carta;
+    this.previewPosition = {
+      top: event.clientY + 10,
+      left: event.clientX + 10
+    };
+  }
+
+  ocultarPreview() {
+    this.cartaPreview = null;
   }
 }

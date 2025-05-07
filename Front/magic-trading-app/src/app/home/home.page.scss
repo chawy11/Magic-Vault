@@ -32,8 +32,6 @@ ion-list ion-item {
   position: fixed;
   z-index: 1000;
   border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  background: white;
   padding: 5px;
   pointer-events: none; /* Para que no interfiera con clicks */
 
@@ -42,5 +40,6 @@ ion-list ion-item {
     width: 200px;
     height: auto;
   }
+
 }
 
