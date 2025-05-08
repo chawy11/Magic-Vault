@@ -141,61 +141,115 @@ export class ProfilePage implements OnInit {
       this.viewedUsername = params['username'] || this.currentUser;
       this.isOwnProfile = !params['username'] || params['username'] === this.currentUser;
 
-      if (this.isOwnProfile) {
-        this.loadProfile();
-        this.loadReviews();
-      } else {
-        this.loadOtherUserProfile();
-        this.loadMatches();
-      }
-    });
+      // Obtener ID del usuario actual (siempre necesario para comparaciones)
+      this.userProfileService.getMyProfile().subscribe(data => {
+        this.currentUserId = data._id;
 
-    // Obtener ID del usuario actual
-    this.userProfileService.getMyProfile().subscribe(data => {
-      this.currentUserId = data._id;
+        // Una vez que tenemos el ID del usuario actual, cargamos el resto
+        if (this.isOwnProfile) {
+          this.loadProfile();
+          this.loadTransactions();
+        } else {
+          this.loadOtherUserProfile();
+          this.loadMatches();
+          // Cargar transacciones entre el usuario actual y el visualizado
+          this.loadUserTransactions();
+        }
+      });
     });
-
-    // Cargar transacciones
-    this.loadTransactions();
   }
 
-  // En profile.page.ts
+  // Actualiza loadUserTransactions para que siempre cargue las reseñas después
+  loadUserTransactions(): void {
+    if (!this.viewedUserId) return;
+
+    // En lugar de llamar a una API inexistente, usa la API principal de transacciones
+    // y filtra en el cliente
+    this.transactionService.getMyTransactions().subscribe(
+      data => {
+        // Filtrar solo transacciones entre el usuario actual y el visualizado
+        this.transactions = data.filter((tx: Transaction) =>
+          (tx.buyerId === this.currentUserId && tx.sellerId === this.viewedUserId) ||
+          (tx.sellerId === this.currentUserId && tx.buyerId === this.viewedUserId));
+
+        // Cargar las reseñas a partir de las transacciones
+        this.loadReviewsFromTransactions();
+      },
+      error => {
+        console.error('Error al cargar transacciones:', error);
+      }
+    );
+  }
 
   loadReviews(): void {
     console.log('Cargando valoraciones...');
 
-    // Filtramos solo transacciones completadas
-    const completedTransactions = this.transactions.filter((tx: Transaction) => tx.status === 'completed');
+    // Usar directamente las transacciones que ya tenemos en memoria
+    this.loadReviewsFromTransactions();
+  }
 
-    // Extraemos las valoraciones
+// Este método ahora va a cargar las reseñas tanto para el perfil propio como para otros perfiles
+  loadReviewsFromTransactions(): void {
+    // Filtramos solo transacciones completadas
+    const completedTransactions = this.transactions.filter((tx: Transaction) =>
+      tx.status === 'completed');
+
     this.reviews = [];
 
     completedTransactions.forEach((tx: Transaction) => {
-      // Si soy el vendedor y el comprador me dejó valoración
-      if (tx.sellerId === this.currentUserId && tx.buyerReview) {
-        this.reviews.push({
-          fromUsername: tx.buyerUsername,
-          rating: tx.buyerReview.rating,
-          comment: tx.buyerReview.comment,
-          date: tx.buyerReview.date,
-          cards: tx.buyerWants || []
-        });
-      }
+      // Si estamos viendo el perfil de otro usuario...
+      if (!this.isOwnProfile) {
+        // Mostrar reseñas que el usuario visualizado ha recibido
+        // Si el otro usuario es el vendedor y tiene reseña del comprador
+        if (tx.sellerId === this.viewedUserId && tx.buyerReview) {
+          this.reviews.push({
+            fromUsername: tx.buyerUsername,
+            rating: tx.buyerReview.rating,
+            comment: tx.buyerReview.comment,
+            date: tx.buyerReview.date,
+            cards: tx.buyerWants || []
+          });
+        }
 
-      // Si soy el comprador y el vendedor me dejó valoración
-      if (tx.buyerId === this.currentUserId && tx.sellerReview) {
-        this.reviews.push({
-          fromUsername: tx.sellerUsername,
-          rating: tx.sellerReview.rating,
-          comment: tx.sellerReview.comment,
-          date: tx.sellerReview.date,
-          cards: tx.sellerWants || []
-        });
+        // Si el otro usuario es el comprador y tiene reseña del vendedor
+        if (tx.buyerId === this.viewedUserId && tx.sellerReview) {
+          this.reviews.push({
+            fromUsername: tx.sellerUsername,
+            rating: tx.sellerReview.rating,
+            comment: tx.sellerReview.comment,
+            date: tx.sellerReview.date,
+            cards: tx.sellerWants || []
+          });
+        }
+      } else {
+        // Si estamos viendo nuestro propio perfil...
+        // Mostrar reseñas que yo he recibido
+        if (tx.sellerId === this.currentUserId && tx.buyerReview) {
+          this.reviews.push({
+            fromUsername: tx.buyerUsername,
+            rating: tx.buyerReview.rating,
+            comment: tx.buyerReview.comment,
+            date: tx.buyerReview.date,
+            cards: tx.buyerWants || []
+          });
+        }
+
+        if (tx.buyerId === this.currentUserId && tx.sellerReview) {
+          this.reviews.push({
+            fromUsername: tx.sellerUsername,
+            rating: tx.sellerReview.rating,
+            comment: tx.sellerReview.comment,
+            date: tx.sellerReview.date,
+            cards: tx.sellerWants || []
+          });
+        }
       }
     });
 
     console.log(`${this.reviews.length} valoraciones cargadas`);
   }
+
+
 
   loadTransactions(): void {
     this.transactionService.getMyTransactions().subscribe(
@@ -339,20 +393,33 @@ export class ProfilePage implements OnInit {
 
     // Si cambia al segmento de transacciones, recargar las transacciones
     if (this.activeSegment === 'transactions') {
-      this.loadTransactions();
+      if (this.isOwnProfile) {
+        this.loadTransactions();
+      } else {
+        this.loadUserTransactions();
+      }
+    }
+
+    // Si cambia al segmento de valoraciones, recargar las valoraciones
+    if (this.activeSegment === 'reviews') {
+      // Tanto para perfil propio como para otros perfiles, usamos loadReviewsFromTransactions
+      // que usará las transacciones actuales para obtener valoraciones
+      if (this.isOwnProfile) {
+        this.loadReviews();
+      } else {
+        this.loadReviewsFromTransactions();
+      }
     }
 
     // Si cambia a wants o sells y hay transacciones completadas, actualizar las listas
-    if ((this.activeSegment === 'wants' || this.activeSegment === 'sells') &&
-      this.transactions.some(tx => tx.status === 'completed')) {
+    if ((this.activeSegment === 'wants' || this.activeSegment === 'sells')) {
       if (this.isOwnProfile) {
-        this.loadProfile(); // Usar loadProfile, no loadMyProfile
+        this.loadProfile();
       } else {
         this.loadOtherUserProfile();
       }
     }
   }
-
 
   searchCards(): void {
     if (this.searchTerm.length < 3) {
@@ -758,13 +825,14 @@ export class ProfilePage implements OnInit {
 
     if (this.isOwnProfile) {
       this.loadProfile();
-      // Esto cargará las valoraciones desde las transacciones
       this.loadTransactions();
-      // Llamamos loadReviews después de cargar las transacciones
-      setTimeout(() => this.loadReviews(), 300);
+      // Ya no necesitas llamar a loadReviews por separado
+      // ya que loadTransactions lo hará cuando termine
     } else {
       this.loadOtherUserProfile();
       this.loadMatches();
+      // Simplemente cargar las transacciones - esto también cargará las reseñas
+      this.loadUserTransactions();
     }
   }
 
