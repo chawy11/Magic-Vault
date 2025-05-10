@@ -31,16 +31,13 @@ export const routes: Routes = [
     canActivate: [AuthGuard],
   },
   {
+    path: 'profile/:username',
+    loadComponent: () => import('./profile/profile.page').then(m => m.ProfilePage),
+    canActivate: [AuthGuard],
+  },
+  {
     path: '',
     redirectTo: 'registro',
     pathMatch: 'full',
   },
-  {
-    path: 'profile',
-    loadComponent: () => import('./profile/profile.page').then(m => m.ProfilePage)
-  },
-  {
-    path: 'profile/:username',
-    loadComponent: () => import('./profile/profile.page').then(m => m.ProfilePage)
-  }
 ];

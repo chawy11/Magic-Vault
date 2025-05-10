@@ -15,14 +15,6 @@ ion-item {
   border-radius: 8px;
 }
 
-ion-icon {
-  margin-right: 12px;
-}
-
-ion-button {
-  margin-top: 16px; /* Espacio entre el botón y los resultados */
-}
-
 /* Añade esto a home.page.scss */
 ion-list ion-item {
   cursor: pointer; /* Cambia el cursor a puntero */
@@ -40,6 +32,29 @@ ion-list ion-item {
     width: 200px;
     height: auto;
   }
+}
 
+/* Estilo para alinear verticalmente el botón de perfil */
+ion-toolbar {
+  ion-buttons {
+    display: flex;
+    align-items: center;
+    height: 100%;
+
+    ion-button {
+      --padding-top: 0;
+      --padding-bottom: 0;
+      margin: 0;
+      height: 100%;
+      display: flex;
+      align-items: center;
+    }
+    ion-icon {
+      font-size: 32px;
+      min-width: 32px;
+      min-height: 32px;
+      margin-right: 12px;
+    }
+  }
 }
 

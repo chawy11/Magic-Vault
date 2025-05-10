@@ -16,86 +16,77 @@
   </ion-toolbar>
 </ion-header>
 
-<!-- Show matches info when viewing another user's profile -->
-<ion-card *ngIf="!isOwnProfile">
-  <ion-card-header>
-    <ion-card-title>Coincidencias</ion-card-title>
-  </ion-card-header>
-  <ion-card-content>
-    <p>
-      <strong>Wants:</strong> {{ matches.wantsMatches }}/{{ matches.wantsTotal }}
-      <span *ngIf="matches.wantsTotal > 0">
-        ({{ (matches.wantsMatches / matches.wantsTotal * 100) | number:'1.0-0' }}%)
-      </span>
-    </p>
-    <p>
-      <strong>Sells:</strong> {{ matches.sellsMatches }}/{{ matches.sellsTotal }}
-      <span *ngIf="matches.sellsTotal > 0">
-        ({{ (matches.sellsMatches / matches.sellsTotal * 100) | number:'1.0-0' }}%)
-      </span>
-    </p>
-  </ion-card-content>
-</ion-card>
 
-<!-- Botón para iniciar una transacción -->
-<ion-button
-  *ngIf="!isOwnProfile && (matches.wantsMatches > 0 || matches.sellsMatches > 0)"
-  expand="block"
-  color="primary"
-  class="ion-margin"
-  (click)="prepareTransaction()">
-  Proponer intercambio
-</ion-button>
+<!-- Modal para selección de transacción -->
+<ion-modal [isOpen]="transactionMode" (ionModalDidDismiss)="cancelTransactionMode()">
+  <ng-template>
+    <ion-header>
+      <ion-toolbar>
+        <ion-title>Proponer transacción</ion-title>
+        <ion-buttons slot="end">
+          <ion-button (click)="cancelTransactionMode()">
+            <ion-icon name="close"></ion-icon>
+          </ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-header>
 
-<!-- Modo de selección de transacción -->
-<div *ngIf="transactionMode" class="ion-padding">
-  <h2>Selecciona cartas para el intercambio</h2>
+    <ion-content>
+      <div class="ion-padding">
+        <h2>Selecciona cartas para el intercambio</h2>
 
-  <!-- Cartas que quieres del otro usuario -->
-  <div *ngIf="theirMatchingCards.length > 0">
-    <h3>Cartas que quieres de {{ viewedUsername }}</h3>
-    <ion-list>
-      <ion-item *ngFor="let card of theirMatchingCards">
-        <ion-checkbox [(ngModel)]="card.selected"></ion-checkbox>
-        <ion-label class="ion-padding-start">
-          <h2>{{ card.cardName }}</h2>
-          <p>Edición: {{ card.edition || 'No especificada' }}</p>
-          <p>Precio: {{ card.price ? (card.price + ' €') : 'N/A' }}</p>
-        </ion-label>
-      </ion-item>
-    </ion-list>
-  </div>
+        <!-- Cartas que quieres del otro usuario -->
+        <div *ngIf="theirMatchingCards.length > 0">
+          <h3>Cartas que quieres de {{ viewedUsername }}</h3>
+          <ion-list>
+            <ion-item *ngFor="let card of theirMatchingCards"
+                      (mouseenter)="mostrarPreview(card, $event)"
+                      (mouseleave)="ocultarPreview()">
+              <ion-checkbox [(ngModel)]="card.selected"></ion-checkbox>
+              <ion-label class="ion-padding-start">
+                <h2>{{ card.cardName }}</h2>
+                <p>Edición: {{ card.edition || 'No especificada' }}</p>
+                <p>Precio: {{ card.price ? (card.price + ' €') : 'N/A' }}</p>
+              </ion-label>
+            </ion-item>
+          </ion-list>
+        </div>
 
-  <!-- Cartas que ofreces -->
-  <div *ngIf="myMatchingCards.length > 0">
-    <h3>Cartas que ofreces a {{ viewedUsername }}</h3>
-    <ion-list>
-      <ion-item *ngFor="let card of myMatchingCards">
-        <ion-checkbox [(ngModel)]="card.selected"></ion-checkbox>
-        <ion-label class="ion-padding-start">
-          <h2>{{ card.cardName }}</h2>
-          <p>Edición: {{ card.edition || 'No especificada' }}</p>
-          <p>Precio: {{ card.price ? (card.price + ' €') : 'N/A' }}</p>
-        </ion-label>
-      </ion-item>
-    </ion-list>
-  </div>
+        <!-- Cartas que ofreces -->
+        <div *ngIf="myMatchingCards.length > 0">
+          <h3>Cartas que ofreces a {{ viewedUsername }}</h3>
+          <ion-list>
+            <ion-item *ngFor="let card of myMatchingCards"
+                      (mouseenter)="mostrarPreview(card, $event)"
+                      (mouseleave)="ocultarPreview()">
+              <ion-checkbox [(ngModel)]="card.selected"></ion-checkbox>
+              <ion-label class="ion-padding-start">
+                <h2>{{ card.cardName }}</h2>
+                <p>Edición: {{ card.edition || 'No especificada' }}</p>
+                <p>Precio: {{ card.price ? (card.price + ' €') : 'N/A' }}</p>
+              </ion-label>
+            </ion-item>
+          </ion-list>
+        </div>
 
-  <!-- Mensaje si no hay cartas para intercambiar -->
-  <div *ngIf="theirMatchingCards.length === 0 && myMatchingCards.length === 0" class="ion-text-center">
-    <p>No hay cartas disponibles para un intercambio</p>
-  </div>
+        <!-- Mensaje si no hay cartas para intercambiar -->
+        <div *ngIf="theirMatchingCards.length === 0 && myMatchingCards.length === 0" class="ion-text-center">
+          <p>No hay cartas disponibles para un intercambio</p>
+        </div>
 
-  <!-- Botones de acción -->
-  <div class="ion-padding">
-    <ion-button expand="block" color="primary" (click)="submitTransaction()" [disabled]="!canSubmitTransaction()">
-      Proponer intercambio
-    </ion-button>
-    <ion-button expand="block" color="medium" (click)="cancelTransactionMode()">
-      Cancelar
-    </ion-button>
-  </div>
-</div>
+        <!-- Botones de acción -->
+        <div class="ion-padding-top">
+          <ion-button expand="block" color="primary" (click)="submitTransaction()" [disabled]="!canSubmitTransaction()">
+            Proponer transacción
+          </ion-button>
+          <ion-button expand="block" color="medium" (click)="cancelTransactionMode()">
+            Cancelar
+          </ion-button>
+        </div>
+      </div>
+    </ion-content>
+  </ng-template>
+</ion-modal>
 
 <ion-segment [(ngModel)]="activeSegment" (ionChange)="segmentChanged($event)">
   <ion-segment-button value="wants">
@@ -112,8 +103,42 @@
   </ion-segment-button>
 </ion-segment>
 
+<!-- Show matches info when viewing another user's profile -->
+<ion-card *ngIf="!isOwnProfile">
+
+  <ion-card-content>
+    <ion-card-header>
+      <ion-card-title>Coincidencias</ion-card-title>
+    </ion-card-header>
+    <div class="organize-matches">
+      <div class="wants-sells-column">
+        <p>
+          <strong>Wants:</strong> {{ matches.wantsMatches }}/{{ matches.wantsTotal }}
+          <span *ngIf="matches.wantsTotal > 0">
+        ({{ (matches.wantsMatches / matches.wantsTotal * 100) | number:'1.0-0' }}%)
+      </span>
+        </p>
+        <p>
+          <strong>Sells:</strong> {{ matches.sellsMatches }}/{{ matches.sellsTotal }}
+          <span *ngIf="matches.sellsTotal > 0">
+        ({{ (matches.sellsMatches / matches.sellsTotal * 100) | number:'1.0-0' }}%)
+      </span>
+        </p>
+      </div>
+  <!-- Botón para iniciar una transacción -->
+  <ion-button
+    *ngIf="!isOwnProfile && (matches.wantsMatches > 0 || matches.sellsMatches > 0)"
+    expand="block"
+    color="primary"
+    class="ion-margin"
+    (click)="prepareTransaction()">
+    Proponer transacción
+  </ion-button>
+  </div>
+  </ion-card-content>
+</ion-card>
+
 <ion-content class="ion-padding main-content">
-  <!-- Barra de búsqueda (visible cuando showSearch es true) -->
   <!-- Barra de búsqueda (siempre visible) -->
   <div class="search-container">
     <ion-searchbar [(ngModel)]="searchTerm" (ionInput)="searchCards()" placeholder="Añadir cartas..."></ion-searchbar>

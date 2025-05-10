@@ -13,7 +13,7 @@ import {
   IonNote,
   IonTitle,
   IonToolbar,
-  IonList, IonIcon,
+  IonList, IonIcon, IonPopover,
 } from '@ionic/angular/standalone';
 import { AuthService } from "../services/auth.service";
 import { ScryfallService } from "../services/scryfall.service";
@@ -21,7 +21,7 @@ import { catchError, debounceTime, distinctUntilChanged, switchMap } from 'rxjs/
 import { of, Subject } from 'rxjs';
 import { Router } from '@angular/router';
 import {addIcons} from "ionicons";
-import {logOutOutline, personCircleOutline, search, star, starOutline} from "ionicons/icons";
+import {logOutOutline, personCircleOutline, personOutline, search, star, starOutline} from "ionicons/icons";
 import { OcrService } from '../services/ocr.service';
 import {UserprofileService} from "../services/userprofile.service";
 
@@ -46,6 +46,7 @@ import {UserprofileService} from "../services/userprofile.service";
     IonInput,
     IonList,
     IonIcon,
+    IonPopover,
   ]
 })
 export class HomePage implements OnInit {
@@ -65,7 +66,7 @@ export class HomePage implements OnInit {
     private scryfallService: ScryfallService,
     private router: Router
   ) {
-    addIcons({search, personCircleOutline, logOutOutline});
+    addIcons({search, personCircleOutline, logOutOutline, personOutline});
   }
 
   ngOnInit(): void {
@@ -423,12 +424,14 @@ export class HomePage implements OnInit {
     }
   }
 
-  irAPerfil(): void {
+  irAPerfil(popover: any): void {
+    popover.dismiss();
     this.router.navigate(['/profile']);
   }
 
   // Función para cerrar la sesión
-  cerrarSesion(): void {
+  cerrarSesion(popover: any): void {
+    popover.dismiss();
     this.authService.cerrarSesion();
   }
 }

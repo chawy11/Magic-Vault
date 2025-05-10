@@ -1,7 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const { MongoClient, ObjectId } = require('mongodb'); // Import ObjectId properly here
+const { MongoClient, ObjectId } = require('mongodb');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
@@ -473,47 +473,65 @@ app.put('/api/transaction/:id/confirm', authenticateToken, async (req, res) => {
     }
 });
 
-
-// JavaScript
+// Añadir reseña a una transacción
 app.post('/api/transaction/:id/review', authenticateToken, async (req, res) => {
     const transactionId = req.params.id;
     const userId = req.user.id;
-    const { rating, comment = '' } = req.body;
+    const { rating, comment } = req.body;
 
     if (!rating || rating < 1 || rating > 5) {
         return res.status(400).json({ message: 'La valoración debe ser un número entre 1 y 5' });
     }
 
     const db = client.db('magic_trading');
-    const txCol = db.collection('transactions');
+    const transactionsCollection = db.collection('transactions');
+
     try {
-        const tx = await txCol.findOne({
+        // Verificar que la transacción existe y el usuario es parte de ella
+        const transaction = await transactionsCollection.findOne({
             _id: new ObjectId(transactionId),
-            status: 'completed',
             $or: [
                 { buyerId: new ObjectId(userId) },
                 { sellerId: new ObjectId(userId) }
-            ]
+            ],
+            status: 'completed' // Solo permitir reseñas en transacciones completadas
         });
-        if (!tx) {
+
+        if (!transaction) {
             return res.status(404).json({ message: 'Transacción no encontrada o no completada' });
         }
 
-        const isBuyer = tx.buyerId.equals(new ObjectId(userId));
+        // Determinar si el usuario es comprador o vendedor
+        const isBuyer = transaction.buyerId.toString() === userId;
         const reviewField = isBuyer ? 'buyerReview' : 'sellerReview';
-        if (tx[reviewField]) {
-            return res.status(400).json({ message: 'Ya has dejado una reseña' });
+        const otherReviewField = isBuyer ? 'sellerReview' : 'buyerReview';
+
+        // Verificar si ya dejó una reseña
+        if (transaction[reviewField]) {
+            return res.status(400).json({ message: 'Ya has dejado una reseña para esta transacción' });
         }
 
-        await txCol.updateOne(
-            { _id: tx._id },
-            { $set: { [reviewField]: { rating, comment, date: new Date() } } }
+        // Actualizar la transacción con la reseña
+        await transactionsCollection.updateOne(
+            { _id: new ObjectId(transactionId) },
+            { $set: {
+                    [reviewField]: {
+                        rating,
+                        comment,
+                        date: new Date()
+                    }
+                }}
         );
 
-        const updated = await txCol.findOne({ _id: tx._id });
-        if (updated.buyerReview && updated.sellerReview) {
-            await txCol.updateOne(
-                { _id: tx._id },
+        // Buscar transacción actualizada para verificar si ambos han dejado reseña
+        const updatedTransaction = await transactionsCollection.findOne({
+            _id: new ObjectId(transactionId)
+        });
+
+        // Si ambos han dejado reseña, marcar la transacción como completamente revisada
+        if (updatedTransaction.buyerReview && updatedTransaction.sellerReview) {
+            await transactionsCollection.updateOne(
+                { _id: new ObjectId(transactionId) },
                 { $set: { reviewsCompleted: true } }
             );
         }
@@ -596,37 +614,6 @@ app.get('/api/user/reviews', authenticateToken, async (req, res) => {
     }
 });
 
-// Update the want cards endpoint
-app.post('/api/user/wants', authenticateToken, async (req, res) => {
-    const { cardId, cardName, quantity = 1, setCode = '', edition = '', language = 'English', foil = false, price = 0 } = req.body;
-    const userId = req.user.id;
-
-    const db = client.db('magic_trading');
-    const collection = db.collection('usuarios');
-
-    try {
-        // Verificar si la carta ya existe en la lista
-        const user = await collection.findOne(
-            { _id: new ObjectId(userId), 'wants.cardId': cardId }
-        );
-
-        if (user) {
-            return res.status(400).json({ message: 'La carta ya está en tu lista de wants' });
-        }
-
-        await collection.updateOne(
-            { _id: new ObjectId(userId) },
-            { $push: { wants: { cardId, cardName, quantity, edition, setCode, language, foil, price, dateAdded: new Date() } } }
-        );
-
-        res.status(200).json({ message: 'Carta añadida a wants' });
-    } catch (err) {
-        console.error('Error al añadir carta:', err);
-        res.status(500).json({ message: 'Error al añadir carta' });
-    }
-});
-
-// Update the sell cards endpoint - this already includes price so no change needed
 
 // Update the sell cards endpoint
 app.post('/api/user/sells', authenticateToken, async (req, res) => {

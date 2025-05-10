@@ -1,4 +1,3 @@
-// src/app/profile/profile.page.ts
 
 import { Component, OnInit } from '@angular/core';
 import { UserprofileService } from '../services/userprofile.service';
@@ -22,8 +21,6 @@ import {
   IonSegmentButton,
   IonSearchbar,
   IonIcon,
-  IonFab,
-  IonFabButton,
   IonModal,
   IonGrid,
   IonRow,
