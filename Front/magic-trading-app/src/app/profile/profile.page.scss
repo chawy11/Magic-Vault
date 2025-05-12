@@ -172,8 +172,8 @@ ion-card {
 }
 
 .review-button {
-  width: calc(100% - 9px);
-  display: block;
+  width: auto;
+  display: inline-block;
   font-size: 11px;
   --padding-start: 16px;
   --padding-end: 16px;

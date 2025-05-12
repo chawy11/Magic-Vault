@@ -38,9 +38,11 @@
       </form>
 
       <!-- Mensaje de error global -->
-      <ion-note *ngIf="mensajeError" color="danger" class="ion-text-center ion-margin-top">
-        {{ mensajeError }}
-      </ion-note>
+      @if (mensajeError) {
+        <ion-note color="danger" class="ion-text-center ion-margin-top ion-padding-bottom">
+          {{ mensajeError }}
+        </ion-note>
+      }
     </div>
   </div>
 </ion-content>

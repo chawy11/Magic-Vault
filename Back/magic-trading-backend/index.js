@@ -614,6 +614,36 @@ app.get('/api/user/reviews', authenticateToken, async (req, res) => {
     }
 });
 
+// Update the want cards endpoint
+app.post('/api/user/wants', authenticateToken, async (req, res) => {
+    const { cardId, cardName, quantity = 1, setCode = '', edition = '', language = 'English', foil = false, price = 0 } = req.body;
+    const userId = req.user.id;
+
+    const db = client.db('magic_trading');
+    const collection = db.collection('usuarios');
+
+    try {
+        // Verificar si la carta ya existe en la lista
+        const user = await collection.findOne(
+            { _id: new ObjectId(userId), 'wants.cardId': cardId }
+        );
+
+        if (user) {
+            return res.status(400).json({ message: 'La carta ya está en tu lista de wants' });
+        }
+
+        await collection.updateOne(
+            { _id: new ObjectId(userId) },
+            { $push: { wants: { cardId, cardName, quantity, edition, setCode, language, foil, price, dateAdded: new Date() } } }
+        );
+
+        res.status(200).json({ message: 'Carta añadida a wants' });
+    } catch (err) {
+        console.error('Error al añadir carta:', err);
+        res.status(500).json({ message: 'Error al añadir carta' });
+    }
+});
+
 
 // Update the sell cards endpoint
 app.post('/api/user/sells', authenticateToken, async (req, res) => {
