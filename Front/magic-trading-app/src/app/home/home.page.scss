@@ -18,6 +18,14 @@ ion-item {
 /* Añade esto a home.page.scss */
 ion-list ion-item {
   cursor: pointer; /* Cambia el cursor a puntero */
+
+  &:hover {
+    --background: rgba(var(--ion-color-primary-rgb), 0.1);
+    --background-hover: rgba(var(--ion-color-primary-rgb), 0.2);
+    transform: translateY(-2px);
+    transition: transform 0.2s, background-color 0.2s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
 }
 
 .card-preview {

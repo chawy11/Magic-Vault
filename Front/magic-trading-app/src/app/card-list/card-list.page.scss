@@ -50,3 +50,16 @@ ion-card-header {
   display: flex;
   flex-direction: column;
 }
+
+ion-card {
+  transition: all 0.3s ease;
+  border-radius: 4px;
+  border: 2px solid transparent; /* Borde transparente inicial */
+
+  &:hover {
+    transform: none; /* Elimina el cambio de escala */
+    box-shadow: 0 0 10px 3px rgba(255, 215, 0, 0.7); /* Sombra dorada */
+    border: 2px solid gold; /* Borde dorado */
+    z-index: 10;
+  }
+}

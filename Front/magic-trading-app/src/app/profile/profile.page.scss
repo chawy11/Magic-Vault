@@ -185,8 +185,18 @@ ion-card {
 }
 
 // Estilo para reducir opacidad al pasar el cursor
-.card-item:hover {
-  background-color: var(--ion-color-light);
+// Estilo mejorado para los elementos de la lista en el perfil
+.card-item,
+.search-results ion-item {
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    --background: rgba(var(--ion-color-primary-rgb), 0.1);
+    --background-hover: rgba(var(--ion-color-primary-rgb), 0.2);
+    transform: translateY(-2px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
 }
 
 
@@ -204,4 +214,6 @@ ion-card {
     border-radius: 4px;
   }
 }
+
+
 
