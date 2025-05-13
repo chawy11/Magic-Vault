@@ -168,3 +168,26 @@ ion-grid {
   font-size: 18px;
   text-align: left;
 }
+
+ion-toolbar {
+  ion-buttons {
+    display: flex;
+    align-items: center;
+    height: 100%;
+
+    ion-button {
+      --padding-top: 0;
+      --padding-bottom: 0;
+      margin: 0;
+      height: 100%;
+      display: flex;
+      align-items: center;
+    }
+    ion-icon {
+      font-size: 32px;
+      min-width: 32px;
+      min-height: 32px;
+      margin-right: 12px;
+    }
+  }
+}

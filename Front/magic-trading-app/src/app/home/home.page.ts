@@ -58,8 +58,6 @@ export class HomePage implements OnInit {
   private searchTerms = new Subject<string>(); // Subject para manejar la búsqueda en tiempo real
 
   constructor(
-    private alertController: AlertController,
-    private userProfileService: UserprofileService,
     private authService: AuthService,
     private scryfallService: ScryfallService,
     private router: Router
