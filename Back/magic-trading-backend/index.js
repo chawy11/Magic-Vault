@@ -558,7 +558,6 @@ app.get('/api/user/reviews', authenticateToken, async (req, res) => {
         const transactionsCollection = db.collection('transactions');
 
         // Asegúrate de comparar con el mismo tipo de datos
-        // Puede ser necesario convertir a ObjectId si usas ObjectId en MongoDB
         const { ObjectId } = require('mongodb');
         const objectId = new ObjectId(userId);
 

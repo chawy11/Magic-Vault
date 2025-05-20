@@ -34,7 +34,7 @@
 
     <ion-content>
       <div class="ion-padding">
-        <h2>Selecciona cartas para el intercambio</h2>
+        <h2>Selecciona cartas</h2>
 
         <!-- Cartas que quieres del otro usuario -->
         @if (theirMatchingCards.length > 0) {
@@ -83,12 +83,20 @@
 
         <!-- Botones de acción -->
         <div class="ion-padding-top">
-          <ion-button expand="block" color="primary" (click)="submitTransaction()" [disabled]="!canSubmitTransaction()">
-            Proponer transacción
-          </ion-button>
-          <ion-button expand="block" color="medium" (click)="cancelTransactionMode()">
-            Cancelar
-          </ion-button>
+          <ion-grid>
+            <ion-row>
+              <ion-col>
+                <ion-button expand="block" color="primary" (click)="submitTransaction()" [disabled]="!canSubmitTransaction()">
+                  Proponer transacción
+                </ion-button>
+              </ion-col>
+              <ion-col>
+                <ion-button expand="block" color="medium" (click)="cancelTransactionMode()">
+                  Cancelar
+                </ion-button>
+              </ion-col>
+            </ion-row>
+          </ion-grid>
         </div>
       </div>
     </ion-content>
