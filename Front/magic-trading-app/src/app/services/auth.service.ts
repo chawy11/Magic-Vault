@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { catchError, throwError } from 'rxjs';
+import { catchError, throwError, Observable } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -16,7 +16,6 @@ export class AuthService {
       catchError((error: HttpErrorResponse) => {
         let errorMessage = 'Ocurrió un error inesperado';
         if (error.status === 400) {
-          // Si recibimos el nuevo formato de errores
           if (error.error.errores) {
             return throwError(() => new Error(JSON.stringify(error.error.errores)));
           } else {
@@ -28,12 +27,15 @@ export class AuthService {
     );
   }
 
-  login(credenciales: any) {
-    return this.http.post(`${this.apiUrl}/login`, credenciales);
+  login(credenciales: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/login`, credenciales).pipe(
+      catchError(this.handleError)
+    );
   }
 
-  guardarToken(token: string) {
+  guardarToken(token: string, usuario: string) {
     localStorage.setItem('token', token);
+    localStorage.setItem('usuario', usuario);
   }
 
   estaAutenticado(): boolean {
@@ -42,6 +44,32 @@ export class AuthService {
 
   cerrarSesion() {
     localStorage.removeItem('token');
-    this.router.navigate(['/login']);
+    localStorage.removeItem('usuario');
+    localStorage.removeItem('userId');
+
+
+    window.location.href = '/login';
+  }
+
+  getUsuarioActual(): string {
+    return localStorage.getItem('usuario') || '';
+  }
+
+  private handleError(error: HttpErrorResponse) {
+    let errorMessage = 'Error en la autenticación';
+
+    if (error.error instanceof ErrorEvent) {
+      errorMessage = `Error: ${error.error.message}`;
+    } else {
+      if (error.status === 400) {
+        errorMessage = error.error.message || 'Usuario o contraseña incorrectos';
+      } else if (error.status === 0) {
+        errorMessage = 'No se pudo conectar al servidor. Verifica tu conexión a internet.';
+      } else {
+        errorMessage = `Error ${error.status}: ${error.error.message || 'Error desconocido'}`;
+      }
+    }
+
+    return throwError(() => new Error(errorMessage));
   }
 }
