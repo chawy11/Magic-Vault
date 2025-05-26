@@ -14,3 +14,6 @@ bootstrapApplication(AppComponent, {
     provideHttpClient(withFetch()),
   ],
 });
+
+
+document.body.classList.add('dark-mode');
