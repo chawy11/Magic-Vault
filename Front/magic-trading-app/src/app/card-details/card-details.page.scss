@@ -1,4 +1,4 @@
-/* Estilos para el spinner de carga */
+
 .loading-spinner {
   display: flex;
   justify-content: center;
@@ -6,12 +6,10 @@
   height: 100%;
 }
 
-/* Estilos para la cuadrícula */
 ion-grid {
   padding: 0;
 }
 
-/* Estilos para cada tarjeta (versión lista/grid) */
 .card {
   height: 100%;
   display: flex;
@@ -19,7 +17,7 @@ ion-grid {
   justify-content: space-between;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   border-radius: 8px;
-  background: #2c2c2c; /* Fondo oscuro para las tarjetas en la lista */
+  background: #2c2c2c;
 
   img {
     width: 100%;
@@ -41,30 +39,24 @@ ion-grid {
     p {
       margin: 0;
       font-size: 14px;
-      color: white; /* Texto en blanco */
+      color: white;
     }
 
     .price {
       font-weight: bold;
-      color: #4fc3f7; /* Azul claro para mejor contraste */
+      color: #4fc3f7;
       text-align: right;
     }
   }
 }
 
-/* Estilos para el mensaje de no resultados */
 .no-results {
   text-align: center;
   margin-top: 20px;
   font-size: 16px;
-  color: #b0b0b0; /* Gris claro para mensajes */
+  color: #b0b0b0;
 }
 
-/* ------------------------- */
-/* Estilos específicos para la vista de detalle de carta */
-/* ------------------------- */
-
-/* Contenedor principal (se mantiene igual) */
 .card-detail-container {
   display: flex;
   flex-direction: column;
@@ -74,10 +66,9 @@ ion-grid {
   padding: 20px;
 }
 
-/* Contenedor de imagen + texto */
 .card-content {
   display: flex;
-  align-items: flex-start; /* Alinea al inicio (top) */
+  align-items: flex-start;
   gap: 20px;
   max-width: 800px;
   width: 100%;
@@ -85,16 +76,14 @@ ion-grid {
   padding: 20px;
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-  position: relative; /* Necesario para posicionar el botón */
+  position: relative;
 }
 
-/* Nuevo contenedor para texto + botón */
 .text-and-options {
   flex: 1;
-  position: relative; /* Para posicionar el botón dentro */
+  position: relative;
 }
 
-/* Botón de opciones (ajustado) */
 .options-button {
   position: absolute;
   top: 0;
@@ -110,7 +99,7 @@ ion-grid {
   cursor: pointer;
 }
 
-/* Resto de estilos (se mantienen igual) */
+
 .card-image {
   width: 300px;
   height: auto;
@@ -120,7 +109,7 @@ ion-grid {
 
 .card-text {
   color: white;
-  padding-top: 10px; /* Espacio para el botón */
+  padding-top: 10px;
 }
 
 .card-text h2 {
@@ -131,11 +120,11 @@ ion-grid {
 .card-description {
   white-space: pre-line;
   line-height: 1.5;
-  color: white; /* Descripción en blanco */
+  color: white;
   font-size: 16px;
 }
 
-/* Botón de opciones */
+
 .options-button {
   position: absolute;
   top: 10px;
@@ -157,13 +146,13 @@ ion-grid {
 
 .options-button ion-icon {
   font-size: 24px;
-  color: white; /* Icono en blanco */
+  color: white;
 }
 
-/* Precio */
+
 .price {
   font-weight: bold;
-  color: #4fc3f7; /* Azul claro para contraste */
+  color: #4fc3f7;
   margin-top: 15px;
   font-size: 18px;
   text-align: left;

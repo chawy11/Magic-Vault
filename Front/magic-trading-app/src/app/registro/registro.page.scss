@@ -46,17 +46,17 @@ ion-button {
 }
 
 p {
-  font-size: 14px; /* Tamaño del texto del enlace */
-  color: #666;     /* Color del texto */
+  font-size: 14px;
+  color: #666;
 }
 
 a {
-  color: var(--ion-color-primary); /* Color del enlace (puedes cambiarlo) */
-  text-decoration: none; /* Quita el subrayado del enlace */
+  color: var(--ion-color-primary);
+  text-decoration: none;
 }
 
 a:hover {
-  text-decoration: underline; /* Subraya el enlace al pasar el ratón */
+  text-decoration: underline;
 }
 
 .floating-text{
