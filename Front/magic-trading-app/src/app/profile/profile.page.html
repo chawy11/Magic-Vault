@@ -7,7 +7,6 @@
     </ion-buttons>
     <ion-title>Perfil de {{ viewedUsername }}</ion-title>
 
-    <!-- Botón de compartir solo en perfil propio -->
     @if (isOwnProfile) {
       <ion-buttons slot="end">
         <ion-button (click)="shareProfile()">
@@ -18,7 +17,6 @@
   </ion-toolbar>
 </ion-header>
 
-<!-- Modal para selección de transacción -->
 <ion-modal [isOpen]="transactionMode" (ionModalDidDismiss)="cancelTransactionMode()">
   <ng-template>
     <ion-header>
@@ -36,7 +34,6 @@
       <div class="ion-padding">
         <h2>Selecciona cartas</h2>
 
-        <!-- Cartas que quieres del otro usuario -->
         @if (theirMatchingCards.length > 0) {
           <h3>Cartas que quieres de {{ viewedUsername }}</h3>
           <ion-list>
@@ -55,7 +52,6 @@
           </ion-list>
         }
 
-        <!-- Cartas que ofreces -->
         @if (myMatchingCards.length > 0) {
           <h3>Cartas que ofreces a {{ viewedUsername }}</h3>
           <ion-list>
@@ -74,14 +70,12 @@
           </ion-list>
         }
 
-        <!-- Mensaje si no hay cartas para intercambiar -->
         @if (theirMatchingCards.length === 0 && myMatchingCards.length === 0) {
           <div class="ion-text-center">
             <p>No hay cartas disponibles para un intercambio</p>
           </div>
         }
 
-        <!-- Botones de acción -->
         <div class="ion-padding-top">
           <ion-grid>
             <ion-row>
@@ -118,7 +112,6 @@
   </ion-segment-button>
 </ion-segment>
 
-<!-- Mostrar información de coincidencias al ver el perfil de otro usuario -->
 @if (!isOwnProfile) {
   <ion-card>
     <ion-card-content>
@@ -140,7 +133,6 @@
             }
           </p>
         </div>
-        <!-- Botón para iniciar una transacción -->
         @if (!isOwnProfile && (matches.wantsMatches > 0 || matches.sellsMatches > 0)) {
           <ion-button
             expand="block"
@@ -156,7 +148,6 @@
 }
 
 <ion-content class="ion-padding main-content">
-  <!-- Barra de búsqueda (solo visible en perfil propio) -->
   @if (isOwnProfile) {
     <div class="search-container">
       <ion-searchbar [(ngModel)]="searchTerm" (ionInput)="searchCards()" placeholder="Añadir cartas..."></ion-searchbar>
@@ -185,7 +176,6 @@
     </div>
   }
 
-  <!-- Lista de Wants -->
   @if (activeSegment === 'wants') {
     <h2>Lista de Wants</h2>
     @if (wantsList.length > 0) {
@@ -220,7 +210,6 @@
     }
   }
 
-  <!-- Lista de Sells -->
   @if (activeSegment === 'sells') {
     <h2>Lista de Sells</h2>
     @if (sellsList.length > 0) {
@@ -255,7 +244,6 @@
     }
   }
 
-  <!-- Lista de transacciones -->
   @if (activeSegment === 'transactions') {
     <h2>Transacciones</h2>
     @if (transactions.length > 0) {
@@ -267,7 +255,6 @@
               <p>Estado: {{ tx.status === 'pending' ? 'Pendiente' : 'Completada' }}</p>
               <p>Fecha: {{ tx.createdAt | date:'dd/MM/yyyy HH:mm' }}</p>
 
-              <!-- Detalles de la transacción -->
               @if (tx.buyerWants.length > 0) {
                 <p><strong>Cartas que quieres:</strong></p>
                 <ul>
@@ -288,7 +275,6 @@
             </ion-label>
 
             @if (tx.status === 'completed' && isOwnProfile) {
-              <!-- Botón para dejar valoración cuando no se ha dejado aún -->
               @if ((tx.buyerId === currentUserId && !tx.buyerReview) ||
               (tx.sellerId === currentUserId && !tx.sellerReview)) {
                 <ion-button class="review-button"
@@ -299,7 +285,6 @@
               }
             }
 
-            <!-- Botón de confirmar, si está pendiente y no ha sido confirmada por este usuario -->
             @if (tx.status === 'pending' && isOwnProfile &&
             ((tx.buyerId === currentUserId && !tx.buyerConfirmed) ||
               (tx.sellerId === currentUserId && !tx.sellerConfirmed))) {
@@ -310,7 +295,6 @@
               </ion-button>
             }
 
-            <!-- Estado de confirmación -->
             @if (tx.status === 'pending') {
               <ion-badge color="warning">
                 {{ getConfirmationStatus(tx) }}
@@ -332,7 +316,6 @@
     }
   }
 
-  <!-- Sección de Valoraciones -->
   @if (activeSegment === 'reviews') {
     <h2>Valoraciones</h2>
 
@@ -384,7 +367,6 @@
     }
   }
 
-  <!-- Modal para editar una carta -->
   <ion-modal [isOpen]="isModalOpen">
     <ng-template>
       <ion-header>
@@ -447,7 +429,6 @@
     </ng-template>
   </ion-modal>
 
-  <!-- Modal para reseñas -->
   <ion-modal [isOpen]="reviewModalOpen">
     <ng-template>
       <ion-header>
@@ -462,7 +443,6 @@
         <h2>Valora tu experiencia con {{ currentReviewTransaction?.buyerId === currentUserId ?
           currentReviewTransaction?.sellerUsername : currentReviewTransaction?.buyerUsername }}</h2>
 
-        <!-- Selector de estrellas -->
         <div class="rating-stars">
           @for (i of [1, 2, 3, 4, 5]; track i) {
             <ion-icon
@@ -474,13 +454,11 @@
           <p>{{ currentReviewRating }} de 5 estrellas</p>
         </div>
 
-        <!-- Campo de comentario -->
         <ion-item>
           <ion-label position="floating">Comentario (opcional)</ion-label>
           <ion-textarea [(ngModel)]="currentReviewComment" name="reviewComment" rows="4"></ion-textarea>
         </ion-item>
 
-        <!-- Botón para enviar -->
         <ion-button expand="block" [disabled]="!currentReviewRating" (click)="submitReview()" class="ion-margin-top">
           Enviar valoración
         </ion-button>
@@ -488,7 +466,6 @@
     </ng-template>
   </ion-modal>
 
-  <!-- Previsualización de la carta -->
   @if (cartaPreview) {
     <div class="card-preview" [style.top.px]="previewPosition.top" [style.left.px]="previewPosition.left">
       <img [src]="cartaPreview.image_uris?.small || cartaPreview.card_faces?.[0]?.image_uris?.small" alt="{{ cartaPreview.name }}">

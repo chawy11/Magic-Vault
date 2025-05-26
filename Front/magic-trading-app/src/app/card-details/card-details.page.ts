@@ -3,9 +3,6 @@ import {ActivatedRoute, Router, RouterLink} from '@angular/router';
 import { ScryfallService } from '../services/scryfall.service';
 import { UserprofileService } from '../services/userprofile.service';
 import {
-  IonCard, IonCardContent,
-  IonCardHeader,
-  IonCardTitle,
   IonContent,
   IonHeader,
   IonTitle,
@@ -95,7 +92,6 @@ export class CardDetailsPage implements OnInit {
     try {
       const printData = await lastValueFrom(this.scryfallService.getCardPrints(this.carta.name));
       if (printData && printData.data) {
-        // Sort by release date (oldest first)
         const sortedPrints = printData.data.sort((a: any, b: any) =>
           new Date(a.released_at).getTime() - new Date(b.released_at).getTime()
         );
@@ -150,7 +146,6 @@ export class CardDetailsPage implements OnInit {
     try {
       const printData = await lastValueFrom(this.scryfallService.getCardPrints(this.carta.name));
       if (printData && printData.data) {
-        // Sort by release date (oldest first)
         const sortedPrints = printData.data.sort((a: any, b: any) =>
           new Date(a.released_at).getTime() - new Date(b.released_at).getTime()
         );

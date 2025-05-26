@@ -1,4 +1,4 @@
-// En transaction.service.ts
+
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
@@ -26,7 +26,6 @@ export class TransactionService {
     );
   }
 
-  // En transaction.service.ts
   getMyTransactions(): Observable<any> {
     return this.http.get(`${this.apiUrl}/transactions`,
       { headers: this.getHeaders() }
@@ -37,7 +36,6 @@ export class TransactionService {
     return this.http.put(`${this.apiUrl}/transaction/${transactionId}/confirm`, {}, { headers: this.getHeaders() });
   }
 
-  // Añadir a transaction.service.ts
   addReview(transactionId: string, rating: number, comment: string): Observable<any> {
     return this.http.post(
       `${this.apiUrl}/transaction/${transactionId}/review`,

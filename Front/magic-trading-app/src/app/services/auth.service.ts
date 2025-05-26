@@ -16,7 +16,6 @@ export class AuthService {
       catchError((error: HttpErrorResponse) => {
         let errorMessage = 'Ocurrió un error inesperado';
         if (error.status === 400) {
-          // Si recibimos el nuevo formato de errores
           if (error.error.errores) {
             return throwError(() => new Error(JSON.stringify(error.error.errores)));
           } else {
@@ -44,15 +43,12 @@ export class AuthService {
   }
 
   cerrarSesion() {
-    // Limpieza completa del localStorage
     localStorage.removeItem('token');
     localStorage.removeItem('usuario');
-
-    // Eliminar cualquier otro dato de sesión que pueda haberse almacenado
     localStorage.removeItem('userId');
 
 
-    window.location.href = '/login'; // Usar en vez de Router para forzar recarga completa
+    window.location.href = '/login';
   }
 
   getUsuarioActual(): string {
@@ -63,10 +59,8 @@ export class AuthService {
     let errorMessage = 'Error en la autenticación';
 
     if (error.error instanceof ErrorEvent) {
-      // Error del lado del cliente
       errorMessage = `Error: ${error.error.message}`;
     } else {
-      // Error del backend
       if (error.status === 400) {
         errorMessage = error.error.message || 'Usuario o contraseña incorrectos';
       } else if (error.status === 0) {

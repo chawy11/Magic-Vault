@@ -1,23 +1,21 @@
-/* Archivo home.page.scss */
 
 .container {
-  max-width: 600px; /* Limita el ancho máximo del contenedor */
-  margin: 0 auto;   /* Centra el contenedor horizontalmente */
-  padding: 16px;    /* Añade un poco de espacio interno */
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 16px;
 }
 
 .search-container {
-  margin-top: 20px; /* Espacio entre el título y el buscador */
+  margin-top: 20px;
 }
 
 ion-item {
-  margin-bottom: 16px; /* Espacio entre el campo de búsqueda y el botón */
+  margin-bottom: 16px;
   border-radius: 8px;
 }
 
-/* Añade esto a home.page.scss */
 ion-list ion-item {
-  cursor: pointer; /* Cambia el cursor a puntero */
+  cursor: pointer;
 
   &:hover {
     --background: rgba(var(--ion-color-primary-rgb), 0.1);
@@ -33,7 +31,7 @@ ion-list ion-item {
   z-index: 1000;
   border-radius: 8px;
   padding: 5px;
-  pointer-events: none; /* Para que no interfiera con clicks */
+  pointer-events: none;
 
   img {
     border-radius: 4px;
@@ -42,7 +40,6 @@ ion-list ion-item {
   }
 }
 
-/* Estilo para alinear verticalmente el botón de perfil */
 ion-toolbar {
   ion-buttons {
     display: flex;

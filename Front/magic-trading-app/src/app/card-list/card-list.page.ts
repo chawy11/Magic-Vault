@@ -1,4 +1,4 @@
-// Front/magic-trading-app/src/app/card-list/card-list.page.ts
+
 import { Component, OnInit } from '@angular/core';
 import {ActivatedRoute, Router, RouterLink} from '@angular/router';
 import { ScryfallService } from '../services/scryfall.service';
@@ -111,7 +111,6 @@ export class CardListPage implements OnInit {
     try {
       const printData = await lastValueFrom(this.scryfallService.getCardPrints(carta.name));
       if (printData && printData.data) {
-        // Sort by release date (oldest first)
         const sortedPrints = printData.data.sort((a: any, b: any) =>
           new Date(a.released_at).getTime() - new Date(b.released_at).getTime()
         );
@@ -164,7 +163,6 @@ export class CardListPage implements OnInit {
     try {
       const printData = await lastValueFrom(this.scryfallService.getCardPrints(carta.name));
       if (printData && printData.data) {
-        // Sort by release date (oldest first)
         const sortedPrints = printData.data.sort((a: any, b: any) =>
           new Date(a.released_at).getTime() - new Date(b.released_at).getTime()
         );

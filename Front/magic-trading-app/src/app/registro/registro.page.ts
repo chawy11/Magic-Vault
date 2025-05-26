@@ -52,28 +52,24 @@ export class RegistroPage {
     });
   }
 
-  // Método para manejar el evento blur
   onBlur(campo: string) {
     this.campoTocado[campo] = true; // Marca el campo como tocado
   }
 
-  // Método para mostrar errores
   mostrarError(campo: string): boolean {
     return ((this.registroForm.get(campo)?.invalid ?? false) && this.campoTocado[campo])
       || !!this.errorMessage[campo];
   }
 
   onSubmit() {
-    // Marca todos los campos como tocados al enviar el formulario
     Object.keys(this.registroForm.controls).forEach((campo) => {
       this.campoTocado[campo] = true;
     });
 
-    // Limpiar mensajes de error previos
     this.errorMessage = {};
 
     if (this.registroForm.invalid) {
-      return; // No envía el formulario si es inválido
+      return;
     }
 
     this.authService.registrar(this.registroForm.value).subscribe({
@@ -85,7 +81,6 @@ export class RegistroPage {
         console.error('Error en el registro', error);
 
         try {
-          // Intentar parsear el mensaje como JSON (lista de errores)
           const errores = JSON.parse(error.message);
           errores.forEach((err: string) => {
             if (err.includes('email')) {
@@ -98,7 +93,6 @@ export class RegistroPage {
             }
           });
         } catch (e) {
-          // Si no es JSON, manejar como antes
           if (error.message === 'El email ya está registrado') {
             this.errorMessage['email'] = error.message;
             this.registroForm.get('email')?.reset();

@@ -49,13 +49,13 @@ import {UserprofileService} from "../services/userprofile.service";
   ]
 })
 export class HomePage implements OnInit {
-  nombreCarta: string = ''; // Para almacenar lo que el usuario escribe en el input
-  searchResults: any[] = []; // Almacenaremos los resultados de la búsqueda de autocompletado
-  loading: boolean = false; // Para saber si estamos cargando los resultados de la búsqueda
-  errorMessage: string = ''; // Para manejar mensajes de error
+  nombreCarta: string = '';
+  searchResults: any[] = [];
+  loading: boolean = false;
+  errorMessage: string = '';
   cartaPreview: any = null;
   previewPosition = { top: 0, left: 0 };
-  private searchTerms = new Subject<string>(); // Subject para manejar la búsqueda en tiempo real
+  private searchTerms = new Subject<string>();
 
   constructor(
     private authService: AuthService,
@@ -68,21 +68,21 @@ export class HomePage implements OnInit {
   ngOnInit(): void {
 
     this.searchTerms.pipe(
-      debounceTime(300), // Espera 300ms después de cada tecla
-      distinctUntilChanged(), // Ignora si el término no cambió
+      debounceTime(300),
+      distinctUntilChanged(),
       switchMap(term => {
         this.loading = true;
         return this.scryfallService.buscarCartas(term).pipe(
           catchError(error => {
             this.loading = false;
             this.errorMessage = 'No se encontraron resultados.';
-            return of({ data: [] }); // Devuelve un array vacío en caso de error
+            return of({ data: [] });
           })
         );
       })
     ).subscribe(
       data => {
-        this.searchResults = data.data || []; // Asigna los resultados o un array vacío
+        this.searchResults = data.data || [];
         this.loading = false;
       },
       error => {
@@ -105,22 +105,19 @@ export class HomePage implements OnInit {
     this.cartaPreview = null;
   }
 
-  // Función para manejar el cambio de entrada en el campo de búsqueda
   onInputChange(term: string | null | undefined): void {
-    const searchTerm = term ?? ''; // Si term es null o undefined, usa una cadena vacía
-    this.searchTerms.next(searchTerm); // Envía el término de búsqueda al Subject
+    const searchTerm = term ?? '';
+    this.searchTerms.next(searchTerm);
   }
 
-  // Función para manejar la selección de una carta del desplegable
   seleccionarCarta(carta: any): void {
-    this.router.navigate(['/card-details', carta.id]); // Navega a la página de detalles
+    this.router.navigate(['/card-details', carta.id]);
   }
 
-  // Función para manejar la búsqueda al presionar "Intro"
   buscarCarta(event?: Event): void {
     if ((!event || (event instanceof KeyboardEvent && event.key === 'Enter')) && this.nombreCarta.trim()) {
       this.router.navigate(['/card-list'], {
-        queryParams: { q: this.nombreCarta.trim() }, // Pasa el término de búsqueda como parámetro
+        queryParams: { q: this.nombreCarta.trim() },
       });
     }
   }
@@ -130,7 +127,7 @@ export class HomePage implements OnInit {
     this.router.navigate(['/profile']);
   }
 
-  // Función para cerrar la sesión
+
   cerrarSesion(popover: any): void {
     popover.dismiss();
     this.authService.cerrarSesion();

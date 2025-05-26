@@ -71,7 +71,6 @@ export class LoginPage {
       return;
     }
 
-    // Enviar la solicitud de login al backend
     this.authService.login(this.loginForm.value).subscribe({
       next: (response: any) => {
         console.log('Inicio de sesión exitoso', response);
@@ -80,7 +79,6 @@ export class LoginPage {
       },
       error: (error) => {
         console.error('Error en el inicio de sesión', error);
-        // Accedemos directamente a error.message ya que handleError ya construyó el mensaje
         this.mensajeError = error.message || 'Error de autenticación';
         this.loginForm.reset();
       }

@@ -30,7 +30,6 @@ export class UserprofileService {
     );
   }
 
-  // Update these methods to include edition data
   addCardToWants(cardId: string, cardName: string, setCode: string = '', setName: string = '', price: number = 0): Observable<any> {
     return this.http.post(`${this.apiUrl}/user/wants`,
       { cardId, cardName, edition: setName, setCode, price },
@@ -45,7 +44,6 @@ export class UserprofileService {
     );
   }
 
-  // Make sure all these other methods use this.apiUrl as well
   updateCardInWants(cardId: string, quantity: number, edition: string, language: string, foil: boolean, price: number = 0, setCode: string = ''): Observable<any> {
     return this.http.put(`${this.apiUrl}/user/wants/${cardId}`,
       { quantity, edition, language, foil, price, setCode },
@@ -72,8 +70,6 @@ export class UserprofileService {
     );
   }
 
-
-// Update these methods to include auth headers
   getProfileByUsername(username: string): Observable<any> {
     return this.http.get(`${this.apiUrl}/profile/${username}`, { headers: this.getHeaders() });
   }

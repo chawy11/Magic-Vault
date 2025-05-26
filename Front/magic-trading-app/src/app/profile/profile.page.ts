@@ -138,38 +138,30 @@ export class ProfilePage implements OnInit {
       this.viewedUsername = params['username'] || this.currentUser;
       this.isOwnProfile = !params['username'] || params['username'] === this.currentUser;
 
-      // Obtener ID del usuario actual (siempre necesario para comparaciones)
       this.userProfileService.getMyProfile().subscribe(data => {
         this.currentUserId = data._id;
 
-        // Una vez que tenemos el ID del usuario actual, cargamos el resto
         if (this.isOwnProfile) {
           this.loadProfile();
           this.loadTransactions();
         } else {
           this.loadOtherUserProfile();
           this.loadMatches();
-          // Cargar transacciones entre el usuario actual y el visualizado
           this.loadUserTransactions();
         }
       });
     });
   }
 
-  // Actualiza loadUserTransactions para que siempre cargue las reseñas después
   loadUserTransactions(): void {
     if (!this.viewedUserId) return;
 
-    // En lugar de llamar a una API inexistente, usa la API principal de transacciones
-    // y filtra en el cliente
     this.transactionService.getMyTransactions().subscribe(
       data => {
-        // Filtrar solo transacciones entre el usuario actual y el visualizado
         this.transactions = data.filter((tx: Transaction) =>
           (tx.buyerId === this.currentUserId && tx.sellerId === this.viewedUserId) ||
           (tx.sellerId === this.currentUserId && tx.buyerId === this.viewedUserId));
 
-        // Cargar las reseñas a partir de las transacciones
         this.loadReviewsFromTransactions();
       },
       error => {
@@ -181,23 +173,17 @@ export class ProfilePage implements OnInit {
   loadReviews(): void {
     console.log('Cargando valoraciones...');
 
-    // Usar directamente las transacciones que ya tenemos en memoria
     this.loadReviewsFromTransactions();
   }
 
-// Este método ahora va a cargar las reseñas tanto para el perfil propio como para otros perfiles
   loadReviewsFromTransactions(): void {
-    // Filtramos solo transacciones completadas
     const completedTransactions = this.transactions.filter((tx: Transaction) =>
       tx.status === 'completed');
 
     this.reviews = [];
 
     completedTransactions.forEach((tx: Transaction) => {
-      // Si estamos viendo el perfil de otro usuario...
       if (!this.isOwnProfile) {
-        // Mostrar reseñas que el usuario visualizado ha recibido
-        // Si el otro usuario es el vendedor y tiene reseña del comprador
         if (tx.sellerId === this.viewedUserId && tx.buyerReview) {
           this.reviews.push({
             fromUsername: tx.buyerUsername,
@@ -208,7 +194,6 @@ export class ProfilePage implements OnInit {
           });
         }
 
-        // Si el otro usuario es el comprador y tiene reseña del vendedor
         if (tx.buyerId === this.viewedUserId && tx.sellerReview) {
           this.reviews.push({
             fromUsername: tx.sellerUsername,
@@ -219,8 +204,6 @@ export class ProfilePage implements OnInit {
           });
         }
       } else {
-        // Si estamos viendo nuestro propio perfil...
-        // Mostrar reseñas que yo he recibido
         if (tx.sellerId === this.currentUserId && tx.buyerReview) {
           this.reviews.push({
             fromUsername: tx.buyerUsername,
@@ -259,16 +242,13 @@ export class ProfilePage implements OnInit {
     );
   }
 
-  // Mejora el método confirmTransaction para actualizar completamente los datos
   confirmTransaction(transactionId: string): void {
     this.transactionService.confirmTransaction(transactionId).subscribe(
       response => {
         this.presentToast('Transacción confirmada correctamente');
 
-        // Recarga todas las listas para reflejar los cambios
         this.loadTransactions();
 
-        // Forzar actualización completa
         if (this.isOwnProfile) {
           this.loadProfile();
         } else {
@@ -276,10 +256,8 @@ export class ProfilePage implements OnInit {
           this.loadMatches();
         }
 
-        // Si la transacción está completa, recarga para ver cambios inmediatos
         if (response.transactionCompleted) {
           setTimeout(() => {
-            // Segunda recarga después de 500ms para asegurar que el backend actualizó todo
             this.loadTransactions();
             if (this.isOwnProfile) {
               this.loadProfile();
@@ -381,14 +359,11 @@ export class ProfilePage implements OnInit {
   }
 
   segmentChanged(event: any): void {
-    // Guardar segmento activo
     this.activeSegment = event.detail.value;
 
-    // Limpiar búsqueda
     this.searchTerm = '';
     this.searchResults = [];
 
-    // Si cambia al segmento de transacciones, recargar las transacciones
     if (this.activeSegment === 'transactions') {
       if (this.isOwnProfile) {
         this.loadTransactions();
@@ -397,10 +372,7 @@ export class ProfilePage implements OnInit {
       }
     }
 
-    // Si cambia al segmento de valoraciones, recargar las valoraciones
     if (this.activeSegment === 'reviews') {
-      // Tanto para perfil propio como para otros perfiles, usamos loadReviewsFromTransactions
-      // que usará las transacciones actuales para obtener valoraciones
       if (this.isOwnProfile) {
         this.loadReviews();
       } else {
@@ -408,7 +380,6 @@ export class ProfilePage implements OnInit {
       }
     }
 
-    // Si cambia a wants o sells y hay transacciones completadas, actualizar las listas
     if ((this.activeSegment === 'wants' || this.activeSegment === 'sells')) {
       if (this.isOwnProfile) {
         this.loadProfile();
@@ -492,7 +463,6 @@ export class ProfilePage implements OnInit {
   }
 
   async addCardToSells(card: any): Promise<void> {
-    // Same implementation as addCardToWants but for sells
     try {
       const printData = await lastValueFrom(this.scryfallService.getCardPrints(card.name));
 
@@ -548,10 +518,8 @@ export class ProfilePage implements OnInit {
 
   async editCard(card: any, type: 'wants' | 'sells') {
     try {
-      // Fetch all editions of this card from Scryfall
       const printData = await lastValueFrom(this.scryfallService.getCardPrints(card.cardName));
 
-      // Create a copy of the card for editing
       this.editingCard = {
         ...card,
         type: type,
@@ -560,11 +528,9 @@ export class ProfilePage implements OnInit {
         price: card.price || 0
       };
 
-      this.printingsMap = {}; // Reset the printings map
+      this.printingsMap = {};
 
-      // Update editions list with real editions from Scryfall
       if (printData && printData.data) {
-        // Store all printings with edition name as key for easy lookup
         printData.data.forEach((print: any) => {
           this.printingsMap[print.set_name] = print;
         });
@@ -582,11 +548,9 @@ export class ProfilePage implements OnInit {
     const selectedEdition = event.detail.value;
     if (this.printingsMap[selectedEdition]) {
       const selectedPrint = this.printingsMap[selectedEdition];
-      // Update the price based on the selected edition
       const price = selectedPrint.prices?.eur || selectedPrint.prices?.usd || 0;
       this.editingCard.price = parseFloat(price) || 0;
 
-      // Also update the setCode
       this.editingCard.setCode = selectedPrint.set;
     }
   }
@@ -594,7 +558,6 @@ export class ProfilePage implements OnInit {
   saveCardChanges() {
     if (!this.editingCard) return;
 
-    // Ensure price is a number
     this.editingCard.price = parseFloat(this.editingCard.price) || 0;
 
     if (this.editingCard.type === 'wants') {
@@ -685,14 +648,11 @@ export class ProfilePage implements OnInit {
   }
 
 
-  // Preparar la transacción
   prepareTransaction(): void {
     this.transactionMode = true;
 
-    // Cargar cartas coincidentes
     this.userProfileService.getMatchingCards(this.viewedUsername).subscribe(
       (data: any) => {
-        // Añadir propiedad selected a todas las cartas
         this.myMatchingCards = (data.myMatchingCards || []).map((card: any) => ({...card, selected: false}));
         this.theirMatchingCards = (data.theirMatchingCards || []).map((card: any) => ({...card, selected: false}));
       },
@@ -703,25 +663,20 @@ export class ProfilePage implements OnInit {
     );
   }
 
-// Cancelar el modo de transacción
   cancelTransactionMode(): void {
     this.transactionMode = false;
     this.myMatchingCards = [];
     this.theirMatchingCards = [];
   }
 
-// Verificar si se puede enviar la transacción
   canSubmitTransaction(): boolean {
-    // Se permite transacción si al menos hay una carta seleccionada (compra, venta o ambas)
     const buyerSelectedCards = this.theirMatchingCards.filter((card: any) => card.selected).length > 0;
     const sellerSelectedCards = this.myMatchingCards.filter((card: any) => card.selected).length > 0;
 
     return buyerSelectedCards || sellerSelectedCards;
   }
 
-// Enviar la transacción
   submitTransaction(): void {
-    // Obtener cartas seleccionadas
     const buyerWants = this.theirMatchingCards.filter((card: any) => card.selected);
     const sellerWants = this.myMatchingCards.filter((card: any) => card.selected);
 
@@ -734,7 +689,6 @@ export class ProfilePage implements OnInit {
       console.error('Error: ID de usuario del vendedor no disponible');
       this.presentToast('Error: No se puede completar la transacción sin ID de vendedor');
 
-      // Intenta cargar el perfil nuevamente
       this.loadOtherUserProfile();
       setTimeout(() => {
         if (this.viewedUserId) {
@@ -748,7 +702,6 @@ export class ProfilePage implements OnInit {
 
     console.log('Enviando transacción con sellerId:', this.viewedUserId);
 
-    // Envía la transacción al servidor
     this.transactionService.createTransaction(
       this.viewedUserId,
       buyerWants,
@@ -769,29 +722,24 @@ export class ProfilePage implements OnInit {
     );
   }
 
-  // Método para abrir el modal de reseñas
-  // En profile.page.ts, modifica el método openReviewModal
   openReviewModal(transaction: any): void {
-    if (!transaction) return; // Prevenir errores con transacciones nulas
+    if (!transaction) return;
 
     this.currentReviewTransaction = transaction;
     this.currentReviewRating = 0;
     this.currentReviewComment = '';
-    this.reviewModalOpen = true; // Mover esta línea al final después de inicializar los valores
+    this.reviewModalOpen = true;
   }
 
-// Método para cerrar el modal
   closeReviewModal(): void {
     this.reviewModalOpen = false;
     this.currentReviewTransaction = null;
   }
 
-// Método para establecer la valoración
   setReviewRating(stars: number): void {
     this.currentReviewRating = stars;
   }
 
-// Método para enviar la reseña
   submitReview(): void {
     if (!this.currentReviewTransaction || !this.currentReviewRating) {
       return;
@@ -805,7 +753,6 @@ export class ProfilePage implements OnInit {
       response => {
         this.presentToast('Valoración enviada correctamente');
         this.closeReviewModal();
-        // Actualizar la lista de transacciones para reflejar la nueva reseña
         this.loadTransactions();
       },
       error => {
@@ -816,19 +763,15 @@ export class ProfilePage implements OnInit {
     );
   }
 
-  // Añade este método a tu clase ProfilePage
   ionViewDidEnter() {
     console.log('🔄 ionViewDidEnter EJECUTADO!');
 
     if (this.isOwnProfile) {
       this.loadProfile();
       this.loadTransactions();
-      // Ya no necesitas llamar a loadReviews por separado
-      // ya que loadTransactions lo hará cuando termine
     } else {
       this.loadOtherUserProfile();
       this.loadMatches();
-      // Simplemente cargar las transacciones - esto también cargará las reseñas
       this.loadUserTransactions();
     }
   }
