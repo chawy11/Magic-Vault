@@ -12,10 +12,10 @@ A web platform that standardizes and automates Magic: The Gathering card trading
 
 ## 🛠️ Tech Stack
 
-**Frontend**: Ionic + Angular 19, TypeScript, RxJS  
-**Backend**: Node.js + Express, JWT Authentication  
-**Database**: MongoDB with Mongoose ODM  
-**External API**: Scryfall Magic: The Gathering API
+- **Frontend**: Ionic + Angular 19, TypeScript, RxJS  
+- **Backend**: Node.js + Express, JWT Authentication  
+- **Database**: MongoDB with Mongoose ODM  
+- **External API**: Scryfall Magic: The Gathering API
 
 ## 🚧 Future Enhancements (Work in progress)
 
