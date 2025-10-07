@@ -31,4 +31,13 @@ export class ScryfallService {
   getCardPrice(setCode: string, cardName: string): Observable<any> {
     return this.http.get<any>(`${this.baseUrl}/cards/search?q=!"${encodeURIComponent(cardName)}" set:${setCode}`);
   }
+
+  searchCardByName(cardName: string, setCode?: string): Observable<any> {
+    let query = `!"${encodeURIComponent(cardName)}"`;
+    if (setCode) {
+      query += ` set:${setCode}`;
+    }
+    const url = `${this.baseUrl}/cards/search?q=${query}&unique=prints`;
+    return this.http.get<any>(url);
+  }
 }

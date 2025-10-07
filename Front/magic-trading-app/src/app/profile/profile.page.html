@@ -151,6 +151,11 @@
   @if (isOwnProfile) {
     <div class="search-container">
       <ion-searchbar [(ngModel)]="searchTerm" (ionInput)="searchCards()" placeholder="Añadir cartas..."></ion-searchbar>
+      
+      <ion-button expand="block" fill="outline" (click)="openImportModal()" class="import-button">
+        <ion-icon slot="start" name="cloud-upload"></ion-icon>
+        Importar lista de cartas
+      </ion-button>
 
       @if (searchResults.length > 0) {
         <div class="search-results">
@@ -462,6 +467,54 @@
         <ion-button expand="block" [disabled]="!currentReviewRating" (click)="submitReview()" class="ion-margin-top">
           Enviar valoración
         </ion-button>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+
+  <ion-modal [isOpen]="isImportModalOpen">
+    <ng-template>
+      <ion-header>
+        <ion-toolbar>
+          <ion-title>Importar lista de cartas</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="closeImportModal()">
+              <ion-icon slot="icon-only" name="close"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="ion-padding">
+        <p>Pega tu lista de cartas en uno de estos formatos:</p>
+        <ul>
+          <li><strong>Moxfield:</strong> 1x Card Name (SET) o 1 Card Name</li>
+          <li><strong>Manabox:</strong> 1 Card Name</li>
+          <li><strong>CSV:</strong> Quantity,Name,Set,Foil</li>
+          <li><strong>Texto plano:</strong> Card Name (una por línea)</li>
+        </ul>
+        
+        <ion-item>
+          <ion-label position="stacked">Lista de cartas</ion-label>
+          <ion-textarea 
+            [(ngModel)]="importText" 
+            rows="15" 
+            placeholder="Ejemplo:&#10;1x Lightning Bolt (LEA)&#10;4 Black Lotus&#10;2x Counterspell (ICE)"
+            [disabled]="importingCards">
+          </ion-textarea>
+        </ion-item>
+
+        <div class="ion-padding-top">
+          <ion-button 
+            expand="block" 
+            (click)="importCardList()" 
+            [disabled]="!importText || importingCards">
+            @if (importingCards) {
+              <ion-spinner name="crescent" slot="start"></ion-spinner>
+              Importando...
+            } @else {
+              Importar a {{ activeSegment === 'wants' ? 'Wants' : 'Sells' }}
+            }
+          </ion-button>
+        </div>
       </ion-content>
     </ng-template>
   </ion-modal>
