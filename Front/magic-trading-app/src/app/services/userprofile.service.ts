@@ -77,4 +77,11 @@ export class UserprofileService {
   getMatches(otherUsername: string): Observable<any> {
     return this.http.get(`${this.apiUrl}/matches/${otherUsername}`, { headers: this.getHeaders() });
   }
+
+  bulkImportCards(listType: 'wants' | 'sells', cards: any[]): Observable<any> {
+    return this.http.post(`${this.apiUrl}/user/${listType}/bulk-import`,
+      { cards },
+      { headers: this.getHeaders() }
+    );
+  }
 }

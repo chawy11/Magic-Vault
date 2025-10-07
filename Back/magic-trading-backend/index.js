@@ -799,6 +799,72 @@ app.get('/api/user/profile/me', authenticateToken, async (req, res) => {
     }
 });
 
+// Bulk import cards endpoint
+app.post('/api/user/:listType/bulk-import', authenticateToken, async (req, res) => {
+    const { listType } = req.params; // 'wants' or 'sells'
+    const { cards } = req.body; // Array of card objects with { cardId, cardName, quantity, setCode, edition, language, foil, price }
+    const userId = req.user.id;
+
+    if (!['wants', 'sells'].includes(listType)) {
+        return res.status(400).json({ message: 'Tipo de lista inválido. Debe ser "wants" o "sells".' });
+    }
+
+    if (!Array.isArray(cards) || cards.length === 0) {
+        return res.status(400).json({ message: 'Se requiere un array de cartas no vacío' });
+    }
+
+    const db = client.db('magic_trading');
+    const collection = db.collection('usuarios');
+
+    try {
+        const user = await collection.findOne({ _id: new ObjectId(userId) });
+        if (!user) {
+            return res.status(404).json({ message: 'Usuario no encontrado' });
+        }
+
+        const existingList = user[listType] || [];
+        const existingCardIds = new Set(existingList.map(card => card.cardId));
+
+        // Filter out cards that already exist in the list
+        const cardsToAdd = cards
+            .filter(card => card.cardId && card.cardName && !existingCardIds.has(card.cardId))
+            .map(card => ({
+                cardId: card.cardId,
+                cardName: card.cardName,
+                quantity: card.quantity || 1,
+                edition: card.edition || '',
+                setCode: card.setCode || '',
+                language: card.language || 'English',
+                foil: card.foil || false,
+                price: card.price || 0,
+                dateAdded: new Date()
+            }));
+
+        if (cardsToAdd.length === 0) {
+            return res.status(400).json({ 
+                message: 'Ninguna carta nueva para añadir. Todas ya existen en tu lista.',
+                skipped: cards.length
+            });
+        }
+
+        // Bulk insert all cards
+        await collection.updateOne(
+            { _id: new ObjectId(userId) },
+            { $push: { [listType]: { $each: cardsToAdd } } }
+        );
+
+        const skipped = cards.length - cardsToAdd.length;
+        res.status(200).json({ 
+            message: `${cardsToAdd.length} carta(s) añadida(s) correctamente`,
+            added: cardsToAdd.length,
+            skipped: skipped
+        });
+    } catch (err) {
+        console.error('Error al importar cartas:', err);
+        res.status(500).json({ message: 'Error al importar cartas' });
+    }
+});
+
 app.get('/', (req, res) => {
     res.send('¡Bienvenido al backend de Magic Trading!');
 });

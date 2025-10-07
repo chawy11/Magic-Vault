@@ -2,6 +2,7 @@
 import { Component, OnInit } from '@angular/core';
 import { UserprofileService } from '../services/userprofile.service';
 import { ScryfallService } from '../services/scryfall.service';
+import { CardParserService, ParsedCard } from '../services/card-parser.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
@@ -31,11 +32,11 @@ import {
   IonCardHeader,
   IonCardTitle,
   IonCardContent,
-  IonCheckbox, IonBadge, IonTextarea
+  IonCheckbox, IonBadge, IonTextarea, IonSpinner
 } from '@ionic/angular/standalone';
 import { AlertController } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import {search, add, create, close, trash, ellipsisVertical, arrowBack, share, star, starOutline} from 'ionicons/icons';
+import {search, add, create, close, trash, ellipsisVertical, arrowBack, share, star, starOutline, cloudUpload} from 'ionicons/icons';
 import { lastValueFrom } from 'rxjs';
 import {RouterLink} from "@angular/router";
 import { ActivatedRoute } from '@angular/router';
@@ -79,7 +80,7 @@ interface Transaction {
     IonHeader, IonToolbar, IonTitle, IonContent, IonItem,
     IonLabel, IonList, IonButton, IonInput, IonSelect, IonSelectOption,
     IonSegment, IonCardSubtitle, IonSegmentButton, IonSearchbar, IonIcon,
-    IonModal, IonGrid, IonRow, IonCol, IonToggle, IonButtons, RouterLink, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonCheckbox, IonBadge, IonTextarea
+    IonModal, IonGrid, IonRow, IonCol, IonToggle, IonButtons, RouterLink, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonCheckbox, IonBadge, IonTextarea, IonSpinner
   ]
 })
 export class ProfilePage implements OnInit {
@@ -110,6 +111,9 @@ export class ProfilePage implements OnInit {
   reviews: any[] = [];
   cartaPreview: any = null;
   previewPosition = { top: 0, left: 0 };
+  isImportModalOpen: boolean = false;
+  importText: string = '';
+  importingCards: boolean = false;
 
   matches = {
     wantsMatches: 0,
@@ -121,13 +125,14 @@ export class ProfilePage implements OnInit {
   constructor(
     private userProfileService: UserprofileService,
     private scryfallService: ScryfallService,
+    private cardParserService: CardParserService,
     private alertController: AlertController,
     private route: ActivatedRoute,
     private toastController: ToastController,
     private transactionService: TransactionService,
 
   ) {
-    addIcons({ search, add, create, close, trash, ellipsisVertical, arrowBack, share, star, starOutline });
+    addIcons({ search, add, create, close, trash, ellipsisVertical, arrowBack, share, star, starOutline, cloudUpload });
     this.currentUser = localStorage.getItem('usuario') || '';
   }
 
@@ -786,5 +791,148 @@ export class ProfilePage implements OnInit {
 
   ocultarPreview() {
     this.cartaPreview = null;
+  }
+
+  openImportModal() {
+    this.isImportModalOpen = true;
+    this.importText = '';
+  }
+
+  closeImportModal() {
+    this.isImportModalOpen = false;
+    this.importText = '';
+  }
+
+  async importCardList() {
+    if (!this.importText || !this.importText.trim()) {
+      await this.presentToast('Por favor, ingresa una lista de cartas');
+      return;
+    }
+
+    this.importingCards = true;
+
+    try {
+      // Parse the card list
+      const parsedCards = this.cardParserService.parseCardList(this.importText);
+      
+      if (parsedCards.length === 0) {
+        await this.presentToast('No se encontraron cartas válidas en el texto');
+        this.importingCards = false;
+        return;
+      }
+
+      // Validate parsed cards
+      const { valid, invalid } = this.cardParserService.validateCards(parsedCards);
+      
+      if (invalid.length > 0) {
+        console.warn('Algunas cartas no son válidas:', invalid);
+      }
+
+      if (valid.length === 0) {
+        await this.presentToast('No se encontraron cartas válidas para importar');
+        this.importingCards = false;
+        return;
+      }
+
+      // Show progress alert
+      const alert = await this.alertController.create({
+        header: 'Importando cartas',
+        message: `Buscando ${valid.length} carta(s) en Scryfall...`,
+        backdropDismiss: false
+      });
+      await alert.present();
+
+      // Lookup cards in Scryfall
+      const cardsToImport: any[] = [];
+      let successCount = 0;
+      let failCount = 0;
+
+      for (let i = 0; i < valid.length; i++) {
+        const parsedCard = valid[i];
+        try {
+          // Update progress message
+          alert.message = `Buscando ${i + 1}/${valid.length}: ${parsedCard.name}...`;
+
+          // Search for the card in Scryfall
+          const result = await lastValueFrom(
+            this.scryfallService.searchCardByName(parsedCard.name, parsedCard.setCode)
+          );
+
+          if (result && result.data && result.data.length > 0) {
+            // Get the first matching card (or the one matching the set if specified)
+            let selectedCard = result.data[0];
+            
+            // If set code was specified, try to find exact match
+            if (parsedCard.setCode && parsedCard.setCode.length > 0) {
+              const setMatch = result.data.find((card: any) => 
+                card.set.toUpperCase() === parsedCard.setCode!.toUpperCase()
+              );
+              if (setMatch) {
+                selectedCard = setMatch;
+              }
+            }
+
+            const price = selectedCard.prices?.eur || selectedCard.prices?.usd || 0;
+
+            cardsToImport.push({
+              cardId: selectedCard.id,
+              cardName: selectedCard.name,
+              quantity: parsedCard.quantity,
+              setCode: selectedCard.set,
+              edition: selectedCard.set_name,
+              language: 'English',
+              foil: parsedCard.foil || false,
+              price: parseFloat(price) || 0
+            });
+            successCount++;
+          } else {
+            console.warn(`No se encontró la carta: ${parsedCard.name}`);
+            failCount++;
+          }
+        } catch (error) {
+          console.error(`Error buscando carta ${parsedCard.name}:`, error);
+          failCount++;
+        }
+
+        // Add a small delay to avoid rate limiting
+        if (i < valid.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+
+      await alert.dismiss();
+
+      if (cardsToImport.length === 0) {
+        await this.presentToast('No se pudo encontrar ninguna carta en Scryfall');
+        this.importingCards = false;
+        return;
+      }
+
+      // Import cards via bulk endpoint
+      const listType = this.activeSegment === 'wants' ? 'wants' : 'sells';
+      
+      this.userProfileService.bulkImportCards(listType, cardsToImport).subscribe(
+        async (response) => {
+          await this.presentToast(
+            `${response.added} carta(s) importada(s) correctamente` + 
+            (response.skipped > 0 ? `, ${response.skipped} omitida(s) (ya existían)` : '') +
+            (failCount > 0 ? `, ${failCount} no encontrada(s)` : '')
+          );
+          this.loadProfile();
+          this.closeImportModal();
+          this.importingCards = false;
+        },
+        async (error) => {
+          console.error('Error al importar cartas:', error);
+          await this.presentToast('Error al importar cartas. Por favor, intenta de nuevo.');
+          this.importingCards = false;
+        }
+      );
+
+    } catch (error) {
+      console.error('Error en el proceso de importación:', error);
+      await this.presentToast('Error al procesar la lista de cartas');
+      this.importingCards = false;
+    }
   }
 }

@@ -6,6 +6,7 @@ A web platform that standardizes and automates Magic: The Gathering card trading
 ## 🚀 Features
 
 - **Card Search & Management**: Integrated with Scryfall API for real-time market prices
+- **Bulk Card Import**: Import card lists from Moxfield, Manabox, CSV, or plain text (see [IMPORT_CARDS.md](IMPORT_CARDS.md))
 - **Smart Matching System**: Automatic matches between users' Want/Sell lists
 - **Secure Trading**: Bilateral confirmation system and user reviews
 - **User Profiles**: Shareable links with complete trading history
@@ -22,8 +23,6 @@ A web platform that standardizes and automates Magic: The Gathering card trading
 - Advanced OCR for card scanning
 
 - Multi-language card search
-
-- List import from Moxfield/Deckstats
 
 - Premium features (multiple lists, advanced filters)
 
