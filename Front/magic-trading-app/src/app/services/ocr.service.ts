@@ -126,9 +126,17 @@ export class OcrService {
     // Get the first line (typically the card name)
     let cardName = lines[0];
 
-    // Remove common OCR artifacts and numbers at the end
-    cardName = cardName.replace(/[0-9]+$/g, '').trim(); // Remove trailing numbers
-    cardName = cardName.replace(/[|_]/g, '').trim(); // Remove common OCR artifacts
+    // Remove common OCR artifacts (replace with space to maintain word boundaries)
+    cardName = cardName.replace(/[|_]/g, ' ').trim();
+    
+    // Remove trailing set codes (e.g., "JN", "M21", "KHM", "AFR", "2X2", etc.)
+    // Set codes are typically 2-4 characters (letters/numbers) at the end, separated by space
+    // This must be done before removing trailing numbers to handle mixed codes like "M21"
+    cardName = cardName.replace(/\s+[A-Z0-9]{2,4}$/g, '').trim();
+    
+    // Remove pure trailing numbers (like collector numbers)
+    cardName = cardName.replace(/\s+[0-9]+$/g, '').trim();
+    
     cardName = cardName.replace(/\s+/g, ' '); // Normalize whitespace
 
     return cardName;
