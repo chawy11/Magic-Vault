@@ -2,6 +2,8 @@
 import { Component, OnInit } from '@angular/core';
 import { UserprofileService } from '../services/userprofile.service';
 import { ScryfallService } from '../services/scryfall.service';
+import { OcrService } from '../services/ocr.service';
+import { PlatformService } from '../services/platform.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
@@ -31,16 +33,17 @@ import {
   IonCardHeader,
   IonCardTitle,
   IonCardContent,
-  IonCheckbox, IonBadge, IonTextarea
+  IonCheckbox, IonBadge, IonTextarea, IonFab, IonFabButton
 } from '@ionic/angular/standalone';
-import { AlertController } from '@ionic/angular/standalone';
+import { AlertController, LoadingController } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import {search, add, create, close, trash, ellipsisVertical, arrowBack, share, star, starOutline} from 'ionicons/icons';
+import {search, add, create, close, trash, ellipsisVertical, arrowBack, share, star, starOutline, camera} from 'ionicons/icons';
 import { lastValueFrom } from 'rxjs';
 import {RouterLink} from "@angular/router";
 import { ActivatedRoute } from '@angular/router';
 import { ToastController } from '@ionic/angular/standalone';
 import {TransactionService} from "../services/transaction.service";
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 
 interface Transaction {
   _id: string;
@@ -79,7 +82,7 @@ interface Transaction {
     IonHeader, IonToolbar, IonTitle, IonContent, IonItem,
     IonLabel, IonList, IonButton, IonInput, IonSelect, IonSelectOption,
     IonSegment, IonCardSubtitle, IonSegmentButton, IonSearchbar, IonIcon,
-    IonModal, IonGrid, IonRow, IonCol, IonToggle, IonButtons, RouterLink, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonCheckbox, IonBadge, IonTextarea
+    IonModal, IonGrid, IonRow, IonCol, IonToggle, IonButtons, RouterLink, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonCheckbox, IonBadge, IonTextarea, IonFab, IonFabButton
   ]
 })
 export class ProfilePage implements OnInit {
@@ -110,6 +113,7 @@ export class ProfilePage implements OnInit {
   reviews: any[] = [];
   cartaPreview: any = null;
   previewPosition = { top: 0, left: 0 };
+  isMobile: boolean = false;
 
   matches = {
     wantsMatches: 0,
@@ -125,10 +129,14 @@ export class ProfilePage implements OnInit {
     private route: ActivatedRoute,
     private toastController: ToastController,
     private transactionService: TransactionService,
+    private ocrService: OcrService,
+    private platformService: PlatformService,
+    private loadingController: LoadingController
 
   ) {
-    addIcons({ search, add, create, close, trash, ellipsisVertical, arrowBack, share, star, starOutline });
+    addIcons({ search, add, create, close, trash, ellipsisVertical, arrowBack, share, star, starOutline, camera });
     this.currentUser = localStorage.getItem('usuario') || '';
+    this.isMobile = this.platformService.isMobile();
   }
 
 
@@ -786,5 +794,205 @@ export class ProfilePage implements OnInit {
 
   ocultarPreview() {
     this.cartaPreview = null;
+  }
+
+  /**
+   * Scan a card using the device camera and OCR
+   */
+  async scanCardWithCamera(): Promise<void> {
+    // Check if we're on a mobile device
+    if (!this.isMobile) {
+      const toast = await this.toastController.create({
+        message: 'La función de escaneo solo está disponible en dispositivos móviles',
+        duration: 3000,
+        color: 'warning'
+      });
+      await toast.present();
+      return;
+    }
+
+    try {
+      // Take a photo using the device camera
+      const image = await Camera.getPhoto({
+        quality: 90,
+        allowEditing: false,
+        resultType: CameraResultType.DataUrl,
+        source: CameraSource.Camera,
+        promptLabelHeader: 'Escanear Carta',
+        promptLabelPhoto: 'Desde Galería',
+        promptLabelPicture: 'Tomar Foto'
+      });
+
+      if (!image.dataUrl) {
+        throw new Error('No image data received');
+      }
+
+      // Show loading indicator
+      const loading = await this.loadingController.create({
+        message: 'Escaneando carta...',
+        spinner: 'crescent'
+      });
+      await loading.present();
+
+      // Perform OCR on the image
+      const cardName = await this.ocrService.scanCard(image.dataUrl);
+
+      await loading.dismiss();
+
+      if (!cardName || cardName.length < 2) {
+        const toast = await this.toastController.create({
+          message: 'No se pudo detectar el nombre de la carta. Por favor, inténtalo de nuevo asegurándote de que el nombre sea visible.',
+          duration: 4000,
+          color: 'warning'
+        });
+        await toast.present();
+        return;
+      }
+
+      // Search for the card using Scryfall
+      await this.searchAndAddCardByName(cardName);
+
+    } catch (error: any) {
+      console.error('Error scanning card:', error);
+      
+      // Dismiss loading if still present
+      const loading = await this.loadingController.getTop();
+      if (loading) {
+        await loading.dismiss();
+      }
+
+      let errorMessage = 'Error al escanear la carta';
+      
+      if (error.message?.includes('User cancelled')) {
+        return; // User cancelled, no need to show error
+      }
+      
+      if (error.message) {
+        errorMessage = error.message;
+      }
+
+      const toast = await this.toastController.create({
+        message: errorMessage,
+        duration: 3000,
+        color: 'danger'
+      });
+      await toast.present();
+    }
+  }
+
+  /**
+   * Search for a card by name and add it to the list
+   */
+  private async searchAndAddCardByName(cardName: string): Promise<void> {
+    try {
+      // Show that we're searching
+      const loading = await this.loadingController.create({
+        message: `Buscando "${cardName}"...`,
+        spinner: 'crescent'
+      });
+      await loading.present();
+
+      // Search using Scryfall
+      const searchResults = await lastValueFrom(
+        this.scryfallService.buscarCartas(cardName)
+      );
+
+      await loading.dismiss();
+
+      if (!searchResults?.data || searchResults.data.length === 0) {
+        // No results found, ask user if they want to try manual search
+        const alert = await this.alertController.create({
+          header: 'Carta no encontrada',
+          message: `No se encontró ninguna carta con el nombre "${cardName}". ¿Quieres buscar manualmente?`,
+          buttons: [
+            {
+              text: 'Cancelar',
+              role: 'cancel'
+            },
+            {
+              text: 'Buscar',
+              handler: () => {
+                this.searchTerm = cardName;
+                this.searchCards();
+              }
+            }
+          ]
+        });
+        await alert.present();
+        return;
+      }
+
+      // If we have results, show them to the user to confirm
+      if (searchResults.data.length === 1) {
+        // Only one result, ask for confirmation
+        const card = searchResults.data[0];
+        const alert = await this.alertController.create({
+          header: 'Confirmar carta',
+          message: `¿Agregar "${card.name}" a tu lista de ${this.activeSegment === 'wants' ? 'Wants' : 'Sells'}?`,
+          buttons: [
+            {
+              text: 'Cancelar',
+              role: 'cancel'
+            },
+            {
+              text: 'Agregar',
+              handler: () => {
+                if (this.activeSegment === 'wants') {
+                  this.addCardToWants(card);
+                } else {
+                  this.addCardToSells(card);
+                }
+              }
+            }
+          ]
+        });
+        await alert.present();
+      } else {
+        // Multiple results, let user choose
+        const alert = await this.alertController.create({
+          header: 'Seleccionar carta',
+          message: 'Se encontraron varias cartas. Selecciona la correcta:',
+          inputs: searchResults.data.slice(0, 10).map((card: any, idx: number) => ({
+            type: 'radio',
+            label: `${card.name}${card.set_name ? ' (' + card.set_name + ')' : ''}`,
+            value: idx,
+            checked: idx === 0
+          })),
+          buttons: [
+            {
+              text: 'Cancelar',
+              role: 'cancel'
+            },
+            {
+              text: 'Agregar',
+              handler: (value) => {
+                const selectedCard = searchResults.data[value];
+                if (this.activeSegment === 'wants') {
+                  this.addCardToWants(selectedCard);
+                } else {
+                  this.addCardToSells(selectedCard);
+                }
+              }
+            }
+          ]
+        });
+        await alert.present();
+      }
+
+    } catch (error) {
+      console.error('Error searching for card:', error);
+      
+      const loading = await this.loadingController.getTop();
+      if (loading) {
+        await loading.dismiss();
+      }
+
+      const toast = await this.toastController.create({
+        message: 'Error al buscar la carta',
+        duration: 3000,
+        color: 'danger'
+      });
+      await toast.present();
+    }
   }
 }
