@@ -613,6 +613,104 @@ app.get('/api/user/reviews', authenticateToken, async (req, res) => {
     }
 });
 
+// Get all transactions for a specific user (for viewing other profiles)
+app.get('/api/user/:username/transactions', authenticateToken, async (req, res) => {
+    const { username } = req.params;
+
+    const db = client.db('magic_trading');
+    const usersCollection = db.collection('usuarios');
+    const transactionsCollection = db.collection('transactions');
+
+    try {
+        // Find the user by username
+        const user = await usersCollection.findOne({ usuario: username });
+        
+        if (!user) {
+            return res.status(404).json({ message: 'Usuario no encontrado' });
+        }
+
+        // Get all transactions where this user is buyer or seller
+        const transactions = await transactionsCollection.find({
+            $or: [
+                { buyerId: user._id },
+                { sellerId: user._id }
+            ]
+        }).sort({ createdAt: -1 }).toArray();
+
+        res.status(200).json(transactions);
+    } catch (error) {
+        console.error('Error al obtener transacciones del usuario:', error);
+        res.status(500).json({ message: 'Error al obtener transacciones' });
+    }
+});
+
+// Get all reviews for a specific user (for viewing other profiles)
+app.get('/api/user/:username/reviews', authenticateToken, async (req, res) => {
+    const { username } = req.params;
+
+    const db = client.db('magic_trading');
+    const usersCollection = db.collection('usuarios');
+    const transactionsCollection = db.collection('transactions');
+
+    try {
+        // Find the user by username
+        const user = await usersCollection.findOne({ usuario: username });
+        
+        if (!user) {
+            return res.status(404).json({ message: 'Usuario no encontrado' });
+        }
+
+        const userId = user._id;
+
+        // Get reviews where this user was the seller (buyer left a review)
+        const sellerReviews = await transactionsCollection.find({
+            sellerId: userId,
+            status: 'completed',
+            buyerReview: { $exists: true }
+        }).toArray();
+
+        // Get reviews where this user was the buyer (seller left a review)
+        const buyerReviews = await transactionsCollection.find({
+            buyerId: userId,
+            status: 'completed',
+            sellerReview: { $exists: true }
+        }).toArray();
+
+        const reviews = [];
+
+        // Add reviews received as seller
+        for (const tx of sellerReviews) {
+            if (tx.buyerReview) {
+                reviews.push({
+                    fromUsername: tx.buyerUsername,
+                    rating: tx.buyerReview.rating,
+                    comment: tx.buyerReview.comment,
+                    date: tx.buyerReview.date,
+                    cards: tx.buyerWants || []
+                });
+            }
+        }
+
+        // Add reviews received as buyer
+        for (const tx of buyerReviews) {
+            if (tx.sellerReview) {
+                reviews.push({
+                    fromUsername: tx.sellerUsername,
+                    rating: tx.sellerReview.rating,
+                    comment: tx.sellerReview.comment,
+                    date: tx.sellerReview.date,
+                    cards: tx.sellerWants || []
+                });
+            }
+        }
+
+        res.status(200).json(reviews);
+    } catch (error) {
+        console.error('Error al obtener valoraciones del usuario:', error);
+        res.status(500).json({ message: 'Error al cargar las valoraciones' });
+    }
+});
+
 // Update the want cards endpoint
 app.post('/api/user/wants', authenticateToken, async (req, res) => {
     const { cardId, cardName, quantity = 1, setCode = '', edition = '', language = 'English', foil = false, price = 0 } = req.body;

@@ -44,4 +44,18 @@ export class TransactionService {
     );
   }
 
+  // Get all transactions for a specific user (for viewing other profiles)
+  getUserTransactions(username: string): Observable<any> {
+    return this.http.get(`${this.apiUrl}/user/${username}/transactions`,
+      { headers: this.getHeaders() }
+    );
+  }
+
+  // Get all reviews for a specific user (for viewing other profiles)
+  getUserReviews(username: string): Observable<any> {
+    return this.http.get(`${this.apiUrl}/user/${username}/reviews`,
+      { headers: this.getHeaders() }
+    );
+  }
+
 }

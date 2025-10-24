@@ -154,15 +154,12 @@ export class ProfilePage implements OnInit {
   }
 
   loadUserTransactions(): void {
-    if (!this.viewedUserId) return;
+    if (!this.viewedUsername) return;
 
-    this.transactionService.getMyTransactions().subscribe(
+    // Use the new endpoint to get all transactions for the viewed user
+    this.transactionService.getUserTransactions(this.viewedUsername).subscribe(
       data => {
-        this.transactions = data.filter((tx: Transaction) =>
-          (tx.buyerId === this.currentUserId && tx.sellerId === this.viewedUserId) ||
-          (tx.sellerId === this.currentUserId && tx.buyerId === this.viewedUserId));
-
-        this.loadReviewsFromTransactions();
+        this.transactions = data;
       },
       error => {
         console.error('Error al cargar transacciones:', error);
@@ -173,7 +170,21 @@ export class ProfilePage implements OnInit {
   loadReviews(): void {
     console.log('Cargando valoraciones...');
 
-    this.loadReviewsFromTransactions();
+    if (this.isOwnProfile) {
+      // For own profile, use the existing logic
+      this.loadReviewsFromTransactions();
+    } else {
+      // For other profiles, use the new endpoint to get all their reviews
+      this.transactionService.getUserReviews(this.viewedUsername).subscribe(
+        data => {
+          this.reviews = data;
+          console.log(`${this.reviews.length} valoraciones cargadas`);
+        },
+        error => {
+          console.error('Error al cargar valoraciones:', error);
+        }
+      );
+    }
   }
 
   loadReviewsFromTransactions(): void {
@@ -184,6 +195,7 @@ export class ProfilePage implements OnInit {
 
     completedTransactions.forEach((tx: Transaction) => {
       if (!this.isOwnProfile) {
+        // Show all reviews for the viewed user
         if (tx.sellerId === this.viewedUserId && tx.buyerReview) {
           this.reviews.push({
             fromUsername: tx.buyerUsername,
@@ -204,6 +216,7 @@ export class ProfilePage implements OnInit {
           });
         }
       } else {
+        // For own profile, show reviews received
         if (tx.sellerId === this.currentUserId && tx.buyerReview) {
           this.reviews.push({
             fromUsername: tx.buyerUsername,
@@ -373,11 +386,7 @@ export class ProfilePage implements OnInit {
     }
 
     if (this.activeSegment === 'reviews') {
-      if (this.isOwnProfile) {
-        this.loadReviews();
-      } else {
-        this.loadReviewsFromTransactions();
-      }
+      this.loadReviews();
     }
 
     if ((this.activeSegment === 'wants' || this.activeSegment === 'sells')) {
