@@ -160,7 +160,6 @@ export class ProfilePage implements OnInit {
     this.transactionService.getUserTransactions(this.viewedUsername).subscribe(
       data => {
         this.transactions = data;
-        this.loadReviewsFromTransactions();
       },
       error => {
         console.error('Error al cargar transacciones:', error);
