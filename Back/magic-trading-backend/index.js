@@ -4,16 +4,79 @@ const cors = require('cors');
 const { MongoClient, ObjectId } = require('mongodb');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const mongoSanitize = require('express-mongo-sanitize');
+const cookieParser = require('cookie-parser');
+const { body, param, validationResult } = require('express-validator');
 require('dotenv').config();
 
 const app = express();
 const port = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'secreto_temporal';
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017';
+const NODE_ENV = process.env.NODE_ENV || 'development';
 
-// Middleware
-app.use(cors());
-app.use(bodyParser.json());
+// Security warning for default JWT_SECRET
+if (JWT_SECRET === 'secreto_temporal') {
+    console.warn('⚠️  WARNING: Using default JWT_SECRET. Set JWT_SECRET in .env for production!');
+}
+
+// Security Middleware
+// 1. Helmet - Security headers
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            scriptSrc: ["'self'"],
+            imgSrc: ["'self'", "data:", "https:"],
+        },
+    },
+    hsts: {
+        maxAge: 31536000,
+        includeSubDomains: true,
+        preload: true
+    }
+}));
+
+// 2. CORS - Configured for specific origins
+const corsOptions = {
+    origin: NODE_ENV === 'production' 
+        ? process.env.FRONTEND_URL || 'http://localhost:8100'
+        : ['http://localhost:8100', 'http://localhost:4200'],
+    credentials: true,
+    optionsSuccessStatus: 200
+};
+app.use(cors(corsOptions));
+
+// 3. Body parser with size limit to prevent DoS
+app.use(bodyParser.json({ limit: '10kb' }));
+app.use(bodyParser.urlencoded({ extended: true, limit: '10kb' }));
+
+// 4. Cookie parser for potential future cookie-based auth
+app.use(cookieParser());
+
+// 5. MongoDB injection prevention
+app.use(mongoSanitize());
+
+// 6. Rate limiting for authentication endpoints
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5, // Limit each IP to 5 requests per windowMs
+    message: 'Demasiados intentos de autenticación. Por favor, intenta de nuevo más tarde.',
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+// 7. General API rate limiter
+const generalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // Limit each IP to 100 requests per windowMs
+    message: 'Demasiadas solicitudes. Por favor, intenta de nuevo más tarde.',
+    standardHeaders: true,
+    legacyHeaders: false,
+});
 
 // Conexión a MongoDB
 const client = new MongoClient(MONGODB_URI);
@@ -37,14 +100,45 @@ process.on('SIGINT', async () => {
 
 connect();
 
-// Ruta para el registro
-app.post('/api/registro', async (req, res) => {
-    const { usuario, email, password } = req.body;
+// Apply general rate limiter to all API routes
+app.use('/api/', generalLimiter);
 
-    // Validar datos
-    if (!usuario || !email || !password) {
-        return res.status(400).json({ message: 'Todos los campos son obligatorios' });
+// Input validation helper
+const handleValidationErrors = (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ 
+            message: 'Error de validación',
+            errores: errors.array().map(err => err.msg)
+        });
     }
+    next();
+};
+
+// Ruta para el registro
+app.post('/api/registro', 
+    authLimiter,
+    [
+        body('usuario')
+            .trim()
+            .isLength({ min: 3, max: 30 })
+            .withMessage('El usuario debe tener entre 3 y 30 caracteres')
+            .matches(/^[a-zA-Z0-9_]+$/)
+            .withMessage('El usuario solo puede contener letras, números y guiones bajos'),
+        body('email')
+            .trim()
+            .isEmail()
+            .normalizeEmail()
+            .withMessage('Debe proporcionar un email válido'),
+        body('password')
+            .isLength({ min: 8 })
+            .withMessage('La contraseña debe tener al menos 8 caracteres')
+            .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
+            .withMessage('La contraseña debe contener al menos una mayúscula, una minúscula, un número y un carácter especial')
+    ],
+    handleValidationErrors,
+    async (req, res) => {
+    const { usuario, email, password } = req.body;
 
     const db = client.db('magic_trading');
     const collection = db.collection('usuarios');
@@ -94,13 +188,22 @@ app.post('/api/registro', async (req, res) => {
 });
 
 // Ruta para el login
-app.post('/api/login', async (req, res) => {
+app.post('/api/login',
+    authLimiter,
+    [
+        body('usuario')
+            .trim()
+            .notEmpty()
+            .withMessage('El usuario es obligatorio')
+            .isLength({ max: 30 })
+            .withMessage('Usuario inválido'),
+        body('password')
+            .notEmpty()
+            .withMessage('La contraseña es obligatoria')
+    ],
+    handleValidationErrors,
+    async (req, res) => {
     const { usuario, password } = req.body;
-
-    // Validar datos
-    if (!usuario || !password) {
-        return res.status(400).json({ message: 'Todos los campos son obligatorios' });
-    }
 
     const db = client.db('magic_trading');
     const collection = db.collection('usuarios');
@@ -118,6 +221,9 @@ app.post('/api/login', async (req, res) => {
             return res.status(400).json({ message: 'Usuario o contraseña incorrectos' });
         }
 
+        // Log successful authentication
+        console.log(`Usuario autenticado: ${usuarioEncontrado.usuario} at ${new Date().toISOString()}`);
+
         // Generar un token JWT
         const token = jwt.sign(
             {
@@ -125,7 +231,10 @@ app.post('/api/login', async (req, res) => {
                 usuario: usuarioEncontrado.usuario
             },
             JWT_SECRET,
-            { expiresIn: '1h' }
+            { 
+                expiresIn: '1h',
+                algorithm: 'HS256'
+            }
         );
 
         res.status(200).json({
@@ -134,31 +243,51 @@ app.post('/api/login', async (req, res) => {
             usuario: usuarioEncontrado.usuario
         });
     } catch (err) {
-        console.error('Error al iniciar sesión:', err);
+        // Log failed authentication attempts
+        console.error(`Failed login attempt for user: ${usuario} at ${new Date().toISOString()}`);
         res.status(500).json({ message: 'Error al iniciar sesión' });
     }
 });
 
-// Middleware para autenticar token
+// Middleware para autenticar token con mejor seguridad
 function authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
     if (!token) {
+        console.warn(`Unauthorized access attempt to ${req.path} from IP: ${req.ip}`);
         return res.status(401).json({ message: 'No se proporcionó token de autenticación' });
     }
 
-    jwt.verify(token, JWT_SECRET, (err, user) => {
-        if (err) {
-            return res.status(403).json({ message: 'Token inválido o expirado' });
-        }
+    try {
+        // Use synchronous verify with explicit algorithm
+        const user = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
         req.user = user;
         next();
-    });
+    } catch (err) {
+        console.warn(`Invalid token attempt from IP: ${req.ip} - Error: ${err.message}`);
+        
+        if (err.name === 'TokenExpiredError') {
+            return res.status(403).json({ message: 'Token expirado. Por favor, inicia sesión de nuevo.' });
+        } else if (err.name === 'JsonWebTokenError') {
+            return res.status(403).json({ message: 'Token inválido' });
+        } else {
+            return res.status(403).json({ message: 'Error de autenticación' });
+        }
+    }
 }
 
 // Obtener perfil de usuario
-app.get('/api/user/:username', async (req, res) => {
+app.get('/api/user/:username',
+    [
+        param('username')
+            .trim()
+            .isLength({ min: 3, max: 30 })
+            .matches(/^[a-zA-Z0-9_]+$/)
+            .withMessage('Nombre de usuario inválido')
+    ],
+    handleValidationErrors,
+    async (req, res) => {
     const { username } = req.params;
 
     const db = client.db('magic_trading');
@@ -177,7 +306,16 @@ app.get('/api/user/:username', async (req, res) => {
 });
 
 // Get user profile by username (for viewing other profiles)
-app.get('/api/profile/:username', async (req, res) => {
+app.get('/api/profile/:username',
+    [
+        param('username')
+            .trim()
+            .isLength({ min: 3, max: 30 })
+            .matches(/^[a-zA-Z0-9_]+$/)
+            .withMessage('Nombre de usuario inválido')
+    ],
+    handleValidationErrors,
+    async (req, res) => {
     const { username } = req.params;
 
     const db = client.db('magic_trading');
@@ -207,7 +345,17 @@ app.get('/api/profile/:username', async (req, res) => {
 
 // Express route example
 // Fix the authenticateJWT to authenticateToken to match your existing middleware
-app.get('/api/matches/:username', authenticateToken, async (req, res) => {
+app.get('/api/matches/:username',
+    authenticateToken,
+    [
+        param('username')
+            .trim()
+            .isLength({ min: 3, max: 30 })
+            .matches(/^[a-zA-Z0-9_]+$/)
+            .withMessage('Nombre de usuario inválido')
+    ],
+    handleValidationErrors,
+    async (req, res) => {
     try {
         const currentUser = req.user.usuario; // Get current username from token
         const otherUser = req.params.username;
@@ -256,7 +404,17 @@ app.get('/api/matches/:username', authenticateToken, async (req, res) => {
 });
 
 // Obtener cartas coincidentes para transacción
-app.get('/api/matches/:username/cards', authenticateToken, async (req, res) => {
+app.get('/api/matches/:username/cards',
+    authenticateToken,
+    [
+        param('username')
+            .trim()
+            .isLength({ min: 3, max: 30 })
+            .matches(/^[a-zA-Z0-9_]+$/)
+            .withMessage('Nombre de usuario inválido')
+    ],
+    handleValidationErrors,
+    async (req, res) => {
     const { username } = req.params;
     const currentUserId = req.user.id;
     const currentUsername = req.user.usuario;
@@ -323,7 +481,26 @@ app.get('/api/transactions', authenticateToken, async (req, res) => {
 });
 
 // Crear una transacción
-app.post('/api/transaction/create', authenticateToken, async (req, res) => {
+app.post('/api/transaction/create',
+    authenticateToken,
+    [
+        body('sellerId')
+            .trim()
+            .notEmpty()
+            .withMessage('El ID del vendedor es obligatorio')
+            .isLength({ min: 24, max: 24 })
+            .withMessage('ID de vendedor inválido'),
+        body('buyerWants')
+            .optional()
+            .isArray()
+            .withMessage('buyerWants debe ser un array'),
+        body('sellerWants')
+            .optional()
+            .isArray()
+            .withMessage('sellerWants debe ser un array')
+    ],
+    handleValidationErrors,
+    async (req, res) => {
     const { sellerId, buyerWants, sellerWants } = req.body;
     const buyerId = req.user.id;
 
@@ -384,7 +561,16 @@ app.post('/api/transaction/create', authenticateToken, async (req, res) => {
 });
 
 // Modificación en index.js para manejar cartas después de completar una transacción
-app.put('/api/transaction/:id/confirm', authenticateToken, async (req, res) => {
+app.put('/api/transaction/:id/confirm',
+    authenticateToken,
+    [
+        param('id')
+            .trim()
+            .isLength({ min: 24, max: 24 })
+            .withMessage('ID de transacción inválido')
+    ],
+    handleValidationErrors,
+    async (req, res) => {
     const transactionId = req.params.id;
     const userId = req.user.id;
 
@@ -474,14 +660,27 @@ app.put('/api/transaction/:id/confirm', authenticateToken, async (req, res) => {
 });
 
 // Añadir reseña a una transacción
-app.post('/api/transaction/:id/review', authenticateToken, async (req, res) => {
+app.post('/api/transaction/:id/review',
+    authenticateToken,
+    [
+        param('id')
+            .trim()
+            .isLength({ min: 24, max: 24 })
+            .withMessage('ID de transacción inválido'),
+        body('rating')
+            .isInt({ min: 1, max: 5 })
+            .withMessage('La valoración debe ser un número entre 1 y 5'),
+        body('comment')
+            .optional()
+            .trim()
+            .isLength({ max: 500 })
+            .withMessage('El comentario no puede exceder 500 caracteres')
+    ],
+    handleValidationErrors,
+    async (req, res) => {
     const transactionId = req.params.id;
     const userId = req.user.id;
     const { rating, comment } = req.body;
-
-    if (!rating || rating < 1 || rating > 5) {
-        return res.status(400).json({ message: 'La valoración debe ser un número entre 1 y 5' });
-    }
 
     const db = client.db('magic_trading');
     const transactionsCollection = db.collection('transactions');
@@ -614,7 +813,32 @@ app.get('/api/user/reviews', authenticateToken, async (req, res) => {
 });
 
 // Update the want cards endpoint
-app.post('/api/user/wants', authenticateToken, async (req, res) => {
+app.post('/api/user/wants',
+    authenticateToken,
+    [
+        body('cardId')
+            .trim()
+            .notEmpty()
+            .withMessage('El ID de la carta es obligatorio')
+            .isLength({ max: 100 })
+            .withMessage('ID de carta inválido'),
+        body('cardName')
+            .trim()
+            .notEmpty()
+            .withMessage('El nombre de la carta es obligatorio')
+            .isLength({ max: 200 })
+            .withMessage('Nombre de carta demasiado largo'),
+        body('quantity')
+            .optional()
+            .isInt({ min: 1, max: 100 })
+            .withMessage('La cantidad debe ser entre 1 y 100'),
+        body('price')
+            .optional()
+            .isFloat({ min: 0 })
+            .withMessage('El precio debe ser un número positivo')
+    ],
+    handleValidationErrors,
+    async (req, res) => {
     const { cardId, cardName, quantity = 1, setCode = '', edition = '', language = 'English', foil = false, price = 0 } = req.body;
     const userId = req.user.id;
 
@@ -645,7 +869,32 @@ app.post('/api/user/wants', authenticateToken, async (req, res) => {
 
 
 // Update the sell cards endpoint
-app.post('/api/user/sells', authenticateToken, async (req, res) => {
+app.post('/api/user/sells',
+    authenticateToken,
+    [
+        body('cardId')
+            .trim()
+            .notEmpty()
+            .withMessage('El ID de la carta es obligatorio')
+            .isLength({ max: 100 })
+            .withMessage('ID de carta inválido'),
+        body('cardName')
+            .trim()
+            .notEmpty()
+            .withMessage('El nombre de la carta es obligatorio')
+            .isLength({ max: 200 })
+            .withMessage('Nombre de carta demasiado largo'),
+        body('quantity')
+            .optional()
+            .isInt({ min: 1, max: 100 })
+            .withMessage('La cantidad debe ser entre 1 y 100'),
+        body('price')
+            .optional()
+            .isFloat({ min: 0 })
+            .withMessage('El precio debe ser un número positivo')
+    ],
+    handleValidationErrors,
+    async (req, res) => {
     const { cardId, cardName, quantity = 1, setCode = '', edition = '', language = 'English', foil = false, price = 0 } = req.body;
     const userId = req.user.id;
 
@@ -675,8 +924,25 @@ app.post('/api/user/sells', authenticateToken, async (req, res) => {
 });
 
 // Actualizar carta en wants
-
-app.put('/api/user/wants/:cardId', authenticateToken, async (req, res) => {
+app.put('/api/user/wants/:cardId',
+    authenticateToken,
+    [
+        param('cardId')
+            .trim()
+            .notEmpty()
+            .isLength({ max: 100 })
+            .withMessage('ID de carta inválido'),
+        body('quantity')
+            .optional()
+            .isInt({ min: 1, max: 100 })
+            .withMessage('La cantidad debe ser entre 1 y 100'),
+        body('price')
+            .optional()
+            .isFloat({ min: 0 })
+            .withMessage('El precio debe ser un número positivo')
+    ],
+    handleValidationErrors,
+    async (req, res) => {
     const { cardId } = req.params;
     const { quantity, edition, language, foil, price = 0, setCode = '' } = req.body;
     const userId = req.user.id;
@@ -705,7 +971,25 @@ app.put('/api/user/wants/:cardId', authenticateToken, async (req, res) => {
 });
 
 // Actualizar carta en sells
-app.put('/api/user/sells/:cardId', authenticateToken, async (req, res) => {
+app.put('/api/user/sells/:cardId',
+    authenticateToken,
+    [
+        param('cardId')
+            .trim()
+            .notEmpty()
+            .isLength({ max: 100 })
+            .withMessage('ID de carta inválido'),
+        body('quantity')
+            .optional()
+            .isInt({ min: 1, max: 100 })
+            .withMessage('La cantidad debe ser entre 1 y 100'),
+        body('price')
+            .optional()
+            .isFloat({ min: 0 })
+            .withMessage('El precio debe ser un número positivo')
+    ],
+    handleValidationErrors,
+    async (req, res) => {
     const { cardId } = req.params;
     const { quantity, edition, language, foil, price, setCode = '' } = req.body;
     const userId = req.user.id;
@@ -734,7 +1018,17 @@ app.put('/api/user/sells/:cardId', authenticateToken, async (req, res) => {
 });
 
 // Eliminar carta de wants
-app.delete('/api/user/wants/:cardId', authenticateToken, async (req, res) => {
+app.delete('/api/user/wants/:cardId',
+    authenticateToken,
+    [
+        param('cardId')
+            .trim()
+            .notEmpty()
+            .isLength({ max: 100 })
+            .withMessage('ID de carta inválido')
+    ],
+    handleValidationErrors,
+    async (req, res) => {
     const { cardId } = req.params;
     const userId = req.user.id;
 
@@ -755,7 +1049,17 @@ app.delete('/api/user/wants/:cardId', authenticateToken, async (req, res) => {
 });
 
 // Eliminar carta de sells
-app.delete('/api/user/sells/:cardId', authenticateToken, async (req, res) => {
+app.delete('/api/user/sells/:cardId',
+    authenticateToken,
+    [
+        param('cardId')
+            .trim()
+            .notEmpty()
+            .isLength({ max: 100 })
+            .withMessage('ID de carta inválido')
+    ],
+    handleValidationErrors,
+    async (req, res) => {
     const { cardId } = req.params;
     const userId = req.user.id;
 

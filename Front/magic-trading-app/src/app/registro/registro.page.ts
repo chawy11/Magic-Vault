@@ -46,9 +46,9 @@ export class RegistroPage {
     private router: Router
   ) {
     this.registroForm = this.fb.group({
-      usuario: ['', [Validators.required, Validators.minLength(5), CustomValidators.usernameFormat()]],
+      usuario: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(30), CustomValidators.usernameFormat()]],
       email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.minLength(6), CustomValidators.passwordStrength()]],
+      password: ['', [Validators.required, Validators.minLength(8), CustomValidators.passwordStrength()]],
     });
   }
 
