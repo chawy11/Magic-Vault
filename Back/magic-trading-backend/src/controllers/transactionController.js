@@ -59,7 +59,8 @@ class TransactionController {
 
     async getUserReviews(req, res, next) {
         try {
-            const userId = req.user._id || req.user.id;
+            // Use consistent 'id' property from JWT token payload
+            const userId = req.user.id;
             const reviews = await this.transactionService.getUserReviews(userId);
             res.status(200).json(reviews);
         } catch (error) {
