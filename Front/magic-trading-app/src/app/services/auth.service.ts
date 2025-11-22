@@ -2,14 +2,20 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { catchError, throwError, Observable } from 'rxjs';
+import { StorageService } from './storage.service';
+import { API_CONFIG } from '../config/api.config';
 
 @Injectable({
   providedIn: 'root',
 })
 export class AuthService {
-  private apiUrl = 'http://localhost:3000/api';
+  private apiUrl = API_CONFIG.baseUrl;
 
-  constructor(private http: HttpClient, private router: Router) {}
+  constructor(
+    private http: HttpClient, 
+    private router: Router,
+    private storage: StorageService
+  ) {}
 
   registrar(usuario: any) {
     return this.http.post(`${this.apiUrl}/registro`, usuario).pipe(
@@ -34,25 +40,24 @@ export class AuthService {
   }
 
   guardarToken(token: string, usuario: string) {
-    localStorage.setItem('token', token);
-    localStorage.setItem('usuario', usuario);
+    this.storage.setToken(token);
+    this.storage.setUsername(usuario);
   }
 
   estaAutenticado(): boolean {
-    return !!localStorage.getItem('token');
+    return !!this.storage.getToken();
   }
 
   cerrarSesion() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('usuario');
-    localStorage.removeItem('userId');
-
+    this.storage.removeToken();
+    this.storage.removeUsername();
+    this.storage.removeUserId();
 
     window.location.href = '/login';
   }
 
   getUsuarioActual(): string {
-    return localStorage.getItem('usuario') || '';
+    return this.storage.getUsername() || '';
   }
 
   private handleError(error: HttpErrorResponse) {
